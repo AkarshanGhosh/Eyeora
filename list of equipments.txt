@@ -1,0 +1,4 @@
+List of equipment's
+
+1. Cam = M5Stack ESP32 Fisheye Module = ₹1,609.52
+2. battery = 
