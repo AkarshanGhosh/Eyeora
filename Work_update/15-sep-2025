@@ -1,0 +1,160 @@
+Eyeora Project Progress Notes Sential Vision System
+
+Date: 15 September 2025
+Prepared by: Akarshan Ghosh (Akku)
+
+1️⃣ Backend Setup
+
+Framework: FastAPI
+
+Server running on local machine:
+
+Detects LAN/Wi-Fi connection using psutil.
+
+If LAN is connected → shows Eyeora backend homepage with API docs link.
+
+If no LAN → redirects to Wi-Fi config page (SSID/password input).
+
+IP Handling:
+
+get_ip_addresses() prints all IPs (localhost + LAN/hotspot) for easy access.
+
+Uvicorn runs on 0.0.0.0, making the backend accessible for devices on the same network.
+
+Frontend-ready: Homepage is user-friendly and visually styled.
+
+2️⃣ Network / Hotspot
+
+Confirmed: Backend works over laptop hotspot.
+
+Devices (ESP32-CAM, ESP32 Dev Board, phones) can send data as long as hotspot is active.
+
+LAN vs Hotspot:
+
+LAN connected → backend runs normally.
+
+LAN disconnected → redirects to Wi-Fi config page.
+
+IP addresses: Terminal prints all relevant access URLs for local & network access.
+
+3️⃣ Backend Modular Update
+
+Added upload endpoints for testing with frontend:
+
+/upload_image → stores images in uploads/images/.
+
+/upload_video → stores videos in uploads/videos/.
+
+Folders are automatically created if they don’t exist.
+
+File naming includes timestamp + original filename to avoid conflicts.
+
+Endpoints ready to receive uploads from React frontend.
+
+4️⃣ Frontend Plan & Structure
+
+Purpose: Temporarily replace ESP32-CAM live feed with user-uploaded videos/images.
+
+React app features:
+
+Upload images/videos via POST API calls to backend.
+
+Display success messages after upload.
+
+Later: fetch YOLO detection results and display bounding boxes/overlays.
+
+5️⃣ Backend & Frontend Integration Flow
+
+User opens frontend → selects image/video → uploads to backend.
+
+Backend saves file in proper folder (uploads/images/ or uploads/videos/).
+
+Future: YOLO model processes the file and returns detections.
+
+Frontend displays processed results (bounding boxes, detected objects, video frames with overlay).
+
+6️⃣ YOLO Model (Next Phase)
+
+Not implemented yet; currently we have placeholders for future integration.
+
+Planned steps:
+
+Add dummy YOLO endpoint → returns sample detection data for frontend testing.
+
+Replace dummy with real YOLO detection once model is integrated.
+
+Support both images and videos.
+
+7️⃣ Project Modularization
+
+Server.py → main app, LAN/hotspot detection, homepage, Wi-Fi config.
+
+Uploads endpoints → separate logic for image/video uploads.
+
+Folder structure:
+
+Eyeora/
+├─ Server/
+│  ├─ server.py
+│  ├─ endpoints/       # future expansion (YOLO, ESP32 endpoints)
+│  ├─ uploads/
+│  │   ├─ images/
+│  │   └─ videos/
+
+8️⃣ Achievements Today
+
+Backend fully running locally with IP access info.
+
+LAN/hotspot detection implemented.
+
+Fancy backend homepage and Wi-Fi config page.
+
+File upload endpoints created for frontend testing.
+
+React frontend structure and API integration plan ready.
+
+Confirmed backend can receive data over hotspot network, simulating real IoT workflow.
+
+9️⃣ Next Phase (Tomorrow / Future)
+
+React frontend integration:
+
+Upload images/videos and test backend endpoints.
+
+Display confirmation and later YOLO results.
+
+Dummy YOLO endpoint:
+
+Return sample detections for uploaded images/videos.
+
+File management enhancements:
+
+Automatically clean old frames/videos.
+
+YOLO integration:
+
+Integrate real YOLO model for images & videos.
+
+Return bounding boxes & confidence scores to frontend.
+
+ESP32 integration (later):
+
+ESP32-CAM → send live frames via POST / API.
+
+ESP32 Dev → send battery %, sensor readings, servo commands.
+
+Optional advanced features:
+
+WebSocket streaming for near real-time video.
+
+User/device authentication.
+
+Dashboard for monitoring system status and detections.
+
+🔹 Summary
+
+Today we completed backend foundation: network detection, homepage, Wi-Fi config, and upload endpoints.
+
+Frontend will allow testing of uploads and YOLO workflow without needing the actual camera.
+
+Next session: connect frontend → backend → dummy YOLO results, completing the testing loop before ESP32 integration.
