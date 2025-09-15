@@ -1,8 +1,10 @@
 import socket
 import uvicorn
 import psutil
-from fastapi import FastAPI, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Form, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+import os
+from datetime import datetime
 
 app = FastAPI()
 
@@ -66,6 +68,29 @@ async def config_form():
 async def connect_wifi(ssid: str = Form(...), password: str = Form(...)):
     # For now just echo
     return {"status": "received", "ssid": ssid, "password": password}
+
+# ----------------------------
+# Upload Endpoints
+# ----------------------------
+# Ensure upload folders exist
+os.makedirs("uploads/images", exist_ok=True)
+os.makedirs("uploads/videos", exist_ok=True)
+
+@app.post("/upload_image")
+async def upload_image(file: UploadFile = File(...)):
+    filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+    filepath = os.path.join("uploads/images", filename)
+    with open(filepath, "wb") as f:
+        f.write(await file.read())
+    return JSONResponse({"status": "success", "filename": filename})
+
+@app.post("/upload_video")
+async def upload_video(file: UploadFile = File(...)):
+    filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+    filepath = os.path.join("uploads/videos", filename)
+    with open(filepath, "wb") as f:
+        f.write(await file.read())
+    return JSONResponse({"status": "success", "filename": filename})
 
 # ----------------------------
 # Run Server
