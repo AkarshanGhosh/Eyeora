@@ -3,18 +3,44 @@ import uvicorn
 import psutil
 import os
 import cv2
+import base64
+import io
+import numpy as np
 from datetime import datetime
+from PIL import Image
+
 from fastapi import FastAPI, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
 
 app = FastAPI()
 
+# Add CORS middleware to allow frontend requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # ----------------------------
 # Load YOLO Model Once
 # ----------------------------
-MODEL_PATH = "models/yolov8n.pt"   # change if using another checkpoint
-model = YOLO(MODEL_PATH)
+MODEL_PATH = "models/yolo11x.pt"
+
+# Download model if it doesn't exist
+if not os.path.exists(MODEL_PATH):
+    print(f"⬇️ Downloading {MODEL_PATH}...")
+    os.makedirs("models", exist_ok=True)
+    model = YOLO("yolo11x.pt")
+    model.save(MODEL_PATH)
+else:
+    model = YOLO(MODEL_PATH)
+
+print(f"✅ Loaded model: {MODEL_PATH}")
+print(f"📊 Model can detect {len(model.names)} classes: {list(model.names.values())[:10]}...")
 
 # ----------------------------
 # Ensure folders exist
@@ -48,7 +74,7 @@ def get_ip_addresses():
     return ips
 
 # ----------------------------
-# Routes
+# Root
 # ----------------------------
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -86,63 +112,207 @@ async def connect_wifi(ssid: str = Form(...), password: str = Form(...)):
     return {"status": "received", "ssid": ssid, "password": password}
 
 # ----------------------------
-# Upload + YOLO Process (Image)
+# Detect Image
 # ----------------------------
-@app.post("/process_image")
-async def process_image(file: UploadFile = File(...)):
+@app.post("/detect/image")
+async def detect_image(file: UploadFile = File(...)):
     filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
     uploaded_path = os.path.join("uploads/images", filename)
 
     with open(uploaded_path, "wb") as f:
         f.write(await file.read())
 
-    results = model(uploaded_path)
-    processed_path = os.path.join("processed/images", filename)
-    results[0].save(processed_path)
-
-    return JSONResponse({
-        "status": "success",
-        "uploaded": uploaded_path,
-        "processed": processed_path
-    })
-
-# ----------------------------
-# Upload + YOLO Process (Video)
-# ----------------------------
-@app.post("/process_video")
-async def process_video(file: UploadFile = File(...)):
-    filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
-    uploaded_path = os.path.join("uploads/videos", filename)
-
-    with open(uploaded_path, "wb") as f:
-        f.write(await file.read())
-
-    results = model(uploaded_path, save=True)
-    processed_path = results[0].save_dir  # YOLO exports full folder
-
-    return JSONResponse({
-        "status": "success",
-        "uploaded": uploaded_path,
-        "processed_output_folder": processed_path
-    })
+    # Run detection
+    results = model(uploaded_path, conf=0.25, iou=0.45)
     
-#----------------------------
-#  Live Video Stream Endpoint (Placeholder)
-#----------------------------
-@app.post("/live_infer")
-async def live_infer(frame: UploadFile = File(...)):
-    img = Image.open(frame.file).convert("RGB")
-    img = np.array(img)
+    # Get annotated image
+    annotated = results[0].plot()
+    processed_path = os.path.join("processed/images", filename)
+    cv2.imwrite(processed_path, annotated)
 
-    results = yolo_model(img, stream=True)
+    return {"status": "success", "annotated_file": f"/processed/images/{filename}"}
 
-    detections = []
-    for r in results:
-        for box in r.boxes.xyxy:
-            x1, y1, x2, y2 = map(int, box[:4])
-            detections.append({"x": x1, "y": y1, "w": x2-x1, "h": y2-y1, "label": "object"})
+# ----------------------------
+# Serve Processed Images
+# ----------------------------
+@app.get("/processed/images/{filename}")
+async def get_processed_image(filename: str):
+    file_path = os.path.join("processed/images", filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="image/jpeg")
+    return JSONResponse({"error": "File not found"}, status_code=404)
 
-    return {"boxes": detections}
+# ----------------------------
+# Detect Video - FIXED VERSION
+# ----------------------------
+@app.post("/detect/video")
+async def detect_video(file: UploadFile = File(...)):
+    try:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        original_filename = file.filename
+        safe_filename = "".join(c for c in original_filename if c.isalnum() or c in "._- ")
+        
+        filename = f"{timestamp}_{safe_filename}"
+        uploaded_path = os.path.join("uploads/videos", filename)
+        
+        output_filename = f"detected_{timestamp}.mp4"
+        output_path = os.path.join("processed/videos", output_filename)
+
+        print(f"Saving uploaded video to: {uploaded_path}")
+        
+        # Save uploaded video
+        with open(uploaded_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+
+        print(f"Processing video: {uploaded_path}")
+
+        # Open video file
+        cap = cv2.VideoCapture(uploaded_path)
+        
+        if not cap.isOpened():
+            return JSONResponse({"error": "Could not open video file"}, status_code=400)
+        
+        # Get video properties
+        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        if fps <= 0 or fps > 120:
+            fps = 30
+            
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        
+        print(f"Video properties: {width}x{height} @ {fps}fps, {total_frames} frames")
+        
+        # Use MP4V codec - most compatible with browsers without external tools
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+        
+        if not out.isOpened():
+            cap.release()
+            return JSONResponse({"error": "Could not initialize video writer"}, status_code=500)
+        
+        frame_count = 0
+        
+        print("Starting frame processing...")
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            # Run detection on frame
+            results = model(frame, conf=0.25, iou=0.45, verbose=False)
+            annotated_frame = results[0].plot()
+            
+            # Write frame
+            out.write(annotated_frame)
+            
+            frame_count += 1
+            if frame_count % 30 == 0:
+                print(f"Processed {frame_count}/{total_frames} frames ({int(frame_count/total_frames*100)}%)")
+
+        cap.release()
+        out.release()
+        
+        print(f"✅ Video processing complete: {output_path}")
+        print(f"📦 Output file size: {os.path.getsize(output_path)} bytes")
+
+        return {
+            "status": "success", 
+            "annotated_file": f"/processed/videos/{output_filename}",
+            "frames_processed": frame_count,
+            "video_info": {
+                "width": width,
+                "height": height,
+                "fps": fps,
+                "total_frames": frame_count
+            }
+        }
+        
+    except Exception as e:
+        print(f"❌ Error processing video: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# ----------------------------
+# Serve Processed Videos - FIXED VERSION
+# ----------------------------
+@app.get("/processed/videos/{filename}")
+async def get_processed_video(filename: str):
+    file_path = os.path.join("processed/videos", filename)
+    if not os.path.exists(file_path):
+        return JSONResponse({"error": "File not found"}, status_code=404)
+    
+    file_size = os.path.getsize(file_path)
+    print(f"📹 Serving video: {filename} ({file_size} bytes)")
+    
+    return FileResponse(
+        file_path, 
+        media_type="video/mp4",
+        headers={
+            "Accept-Ranges": "bytes",
+            "Content-Type": "video/mp4",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+# ----------------------------
+# Live Stream
+# ----------------------------
+camera = None
+
+def get_camera():
+    global camera
+    if camera is None or not camera.isOpened():
+        camera = cv2.VideoCapture(0)
+        if not camera.isOpened():
+            print("Warning: Could not open camera")
+    return camera
+
+def generate_frames():
+    cam = get_camera()
+    while True:
+        success, frame = cam.read()
+        if not success:
+            break
+        _, buffer = cv2.imencode('.jpg', frame)
+        yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n")
+
+@app.get("/video_feed")
+def video_feed():
+    return StreamingResponse(generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+# ----------------------------
+# Detect Per Frame (Live Detection)
+# ----------------------------
+@app.post("/detect/frame")
+async def detect_frame(data: dict):
+    try:
+        # Decode base64 image
+        img_data = base64.b64decode(data["image"].split(",")[1])
+        img = Image.open(io.BytesIO(img_data)).convert("RGB")
+        img_array = np.array(img)
+
+        # Run detection
+        results = model(img_array, conf=0.25, iou=0.45, verbose=False)
+
+        # Extract detections
+        detections = []
+        for box in results[0].boxes:
+            detections.append({
+                "class": results[0].names[int(box.cls)],
+                "confidence": float(box.conf),
+                "bbox": box.xyxy.tolist()[0]
+            })
+
+        return {"detections": detections}
+        
+    except Exception as e:
+        print(f"Frame detection error: {str(e)}")
+        return {"error": str(e), "detections": []}
 
 # ----------------------------
 # Run Server

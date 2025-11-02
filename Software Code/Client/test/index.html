@@ -2,18 +2,84 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Eyeora Live Test</title>
-  <style>
-    body { background:#0f172a; color:#e2e8f0; text-align:center; font-family: Arial; }
-    #video, #canvas { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); }
-    #video { border-radius: 10px; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eyeora Vision Interface</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1 style="color:#38bdf8;">🎥 Eyeora Live Camera Test</h1>
+  <h1>🎯 Eyeora Vision Interface</h1>
+  <p class="subtitle">Real-time Object Detection System</p>
 
-  <video id="video" autoplay playsinline width="640" height="480"></video>
-  <canvas id="canvas" width="640" height="480"></canvas>
+  <!-- Live Stream Section -->
+  <div class="section">
+    <h2>📹 Live Camera Detection</h2>
+    <div style="text-align: center; margin-bottom: 15px;">
+      <div style="background: rgba(251, 191, 36, 0.1); border-left: 4px solid #fbbf24; padding: 12px; border-radius: 8px; display: inline-block; max-width: 600px;">
+        <small style="color: #fbbf24;">
+          ⚠️ <strong>Camera Permission Required:</strong> Your browser will ask for camera access. 
+          Click "Allow" to enable live detection.
+        </small>
+      </div>
+    </div>
+    <div class="output-container">
+      <div class="canvas-container">
+        <canvas id="liveCanvas" width="640" height="480"></canvas>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" onclick="startStream()">▶️ Start Stream</button>
+      <button class="btn btn-stop" onclick="stopStream()">⏹️ Stop Stream</button>
+      <button class="btn" onclick="startLiveDetection()">🔍 Start Detection</button>
+      <button class="btn btn-stop" onclick="stopLiveDetection()">⏸️ Stop Detection</button>
+    </div>
+    <div style="text-align: center;">
+      <span class="status" id="streamStatus">⚪ Stream: Stopped</span>
+    </div>
+    <div style="text-align: center;" id="liveDetectionInfo"></div>
+  </div>
+
+  <hr>
+
+  <!-- Image Upload Section -->
+  <div class="section">
+    <h2>🖼️ Image Detection</h2>
+    <div style="text-align: center;">
+      <input type="file" id="imageInput" accept="image/*">
+      <br>
+      <button class="btn" onclick="detectImage()">🔍 Detect Objects</button>
+    </div>
+    <div style="text-align: center;">
+      <span class="status" id="imageStatus">⚪ Ready</span>
+    </div>
+    <div class="output-container">
+      <div class="canvas-container" id="imageCanvasContainer" style="display:none;">
+        <canvas id="imageCanvas"></canvas>
+      </div>
+    </div>
+    <div style="text-align: center;" id="imageDetectionInfo"></div>
+  </div>
+
+  <hr>
+
+  <!-- Video Upload Section -->
+  <div class="section">
+    <h2>🎬 Video Detection</h2>
+    <div style="text-align: center;">
+      <input type="file" id="videoInput" accept="video/*">
+      <br>
+      <button class="btn" onclick="detectVideo()">🔍 Detect Objects in Video</button>
+    </div>
+    <div style="text-align: center;">
+      <span class="status" id="videoStatus">⚪ Ready</span>
+    </div>
+    <div class="output-container">
+      <div class="canvas-container" id="videoCanvasContainer" style="display:none;">
+        <canvas id="videoCanvas"></canvas>
+      </div>
+      <video id="videoPlayer" controls style="display:none; max-width: 100%;"></video>
+    </div>
+    <div style="text-align: center;" id="videoDetectionInfo"></div>
+  </div>
 
   <script src="script.js"></script>
 </body>
