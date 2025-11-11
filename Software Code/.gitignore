@@ -13,3 +13,6 @@ Server/models/*.pt
 *.pt
 Server/*.pt
 Server/models/*.pt
+*.pt
+Server/*.pt
+Server/models/*.pt
