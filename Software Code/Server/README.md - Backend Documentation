@@ -1,0 +1,436 @@
+# 🎥 Eyeora AI-CCTV Backend
+
+Advanced AI-powered CCTV analytics system for retail stores. Tracks customers, analyzes shopping behavior, and generates detailed reports.
+
+## 📋 Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [Core Modules](#core-modules)
+- [API Documentation](#api-documentation)
+- [Configuration](#configuration)
+- [Usage Examples](#usage-examples)
+- [Testing](#testing)
+- [Troubleshooting](#troubleshooting)
+
+## ✨ Features
+
+### 🎯 Core Capabilities
+- **Person Detection & Tracking**: Real-time multi-person tracking using YOLO11
+- **Behavior Analysis**: Automatic classification of shopping behaviors
+  - Window Shopping
+  - Browsing
+  - Purchasing
+  - Idle/Loitering
+  - Passing Through
+- **Zone Detection**: Entry, Exit, Checkout zone monitoring
+- **Analytics & Reports**: Comprehensive CSV/JSON/Excel exports
+- **Real-time Alerts**: Crowd detection, loitering, suspicious behavior
+- **Video Processing**: Process uploaded videos with full analytics
+
+### 📊 Analytics Provided
+- Total visitor count
+- Conversion rate (purchases vs visitors)
+- Average visit duration
+- Zone-based movement tracking
+- Behavior distribution
+- Time-series analytics
+
+## 🚀 Installation
+
+### Prerequisites
+
+- Python 3.8 or higher
+- pip (Python package manager)
+- (Optional) CUDA-compatible GPU for faster processing
+
+### Step 1: Clone Repository
+
+```bash
+cd "Software Code/Server"
+```
+
+### Step 2: Create Virtual Environment
+
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On Linux/Mac:
+source venv/bin/activate
+```
+
+### Step 3: Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Step 4: Download YOLO Model
+
+The YOLO model will download automatically on first run. To pre-download:
+
+```bash
+python -c "from ultralytics import YOLO; YOLO('yolo11x.pt')"
+```
+
+## ⚡ Quick Start
+
+### Run the Server
+
+```bash
+python server.py
+```
+
+Server will start at: `http://localhost:8000`
+
+### Test with Sample Video
+
+```python
+from core.video_processor import VideoProcessor
+
+# Initialize processor
+processor = VideoProcessor()
+
+# Process video
+result = processor.process_video(
+    video_path="path/to/video.mp4",
+    generate_output_video=True,
+    export_csv=True
+)
+
+print(f"Total visitors: {result['summary']['total_visitors']}")
+print(f"Conversion rate: {result['summary']['conversion_rate']}%")
+```
+
+## 📁 Project Structure
+
+```
+Server/
+├── core/                          # Core modules
+│   ├── config.py                  # Configuration settings
+│   ├── tracker.py                 # Person tracking system
+│   ├── behavior_analyzer.py       # Behavior analysis
+│   ├── csv_exporter.py            # Data export
+│   ├── video_processor.py         # Video processing engine
+│   ├── detection_engine.py        # YOLO wrapper
+│   └── alert_system.py            # Alert system
+├── routes/                        # API endpoints
+│   ├── detect_routes.py           # Detection endpoints
+│   ├── analytics_routes.py        # Analytics endpoints
+│   └── camera_routes.py           # Camera management
+├── utils/                         # Utilities
+│   ├── video_utils.py             # Video helpers
+│   ├── database.py                # MongoDB connection
+│   └── validators.py              # Input validation
+├── models/                        # YOLO models
+├── data/                          # Data storage
+│   ├── csv/                       # CSV exports
+│   └── reports/                   # Summary reports
+├── Uploads/                       # Uploaded files
+├── processed/                     # Processed output
+├── server.py                      # Main server
+└── requirements.txt               # Dependencies
+```
+
+## 🧩 Core Modules
+
+### 1. Detection Engine (`detection_engine.py`)
+
+Handles YOLO-based object detection.
+
+```python
+from core.detection_engine import DetectionEngine
+
+engine = DetectionEngine()
+detections, crops = engine.detect_people(image)
+print(f"Found {len(detections)} people")
+```
+
+### 2. Person Tracker (`tracker.py`)
+
+Multi-object tracking system.
+
+```python
+from core.tracker import PersonTracker
+
+tracker = PersonTracker()
+active_tracks = tracker.update(detections, timestamp)
+```
+
+### 3. Behavior Analyzer (`behavior_analyzer.py`)
+
+Analyzes shopping behavior.
+
+```python
+from core.behavior_analyzer import BehaviorAnalyzer
+
+analyzer = BehaviorAnalyzer(frame_width, frame_height)
+analysis = analyzer.analyze_track(track)
+print(f"Behavior: {analysis['behavior']}")
+```
+
+### 4. Video Processor (`video_processor.py`)
+
+Main processing pipeline.
+
+```python
+from core.video_processor import VideoProcessor
+
+processor = VideoProcessor()
+result = processor.process_video("video.mp4")
+```
+
+### 5. Alert System (`alert_system.py`)
+
+Real-time monitoring and alerts.
+
+```python
+from core.alert_system import AlertSystem
+
+alert_system = AlertSystem()
+alerts = alert_system.check_alerts(tracks, timestamp, frame_num)
+```
+
+## 🔌 API Documentation
+
+### Detection Endpoints
+
+#### POST `/detect/image`
+Upload and analyze an image.
+
+**Request:**
+```bash
+curl -X POST http://localhost:8000/detect/image \
+  -F "file=@image.jpg" \
+  -F "confidence=0.5"
+```
+
+#### POST `/detect/video`
+Upload and analyze a video.
+
+**Request:**
+```bash
+curl -X POST http://localhost:8000/detect/video \
+  -F "file=@video.mp4" \
+  -F "generate_output=true"
+```
+
+### Analytics Endpoints
+
+#### GET `/analytics/summary`
+Get analytics summary.
+
+#### GET `/analytics/export`
+Export analytics data (CSV/JSON/Excel).
+
+#### GET `/analytics/alerts`
+Get active alerts.
+
+## ⚙️ Configuration
+
+Edit `core/config.py` to customize:
+
+```python
+# Detection Parameters
+CONFIDENCE_THRESHOLD = 0.4
+IOU_THRESHOLD = 0.45
+
+# Behavior Thresholds
+IDLE_TIME_THRESHOLD = 5.0  # seconds
+BROWSING_TIME_THRESHOLD = 3.0
+
+# Alert Settings
+CROWD_THRESHOLD = 10  # people
+
+# Zone Definitions (% of frame)
+ENTRY_ZONE = {
+    "x_start": 0.0,
+    "x_end": 0.3,
+    "y_start": 0.0,
+    "y_end": 1.0
+}
+```
+
+## 📚 Usage Examples
+
+### Example 1: Process Video
+
+```python
+from core.video_processor import VideoProcessor
+
+processor = VideoProcessor()
+result = processor.process_video(
+    video_path="store_footage.mp4",
+    output_path="analyzed_output.mp4",
+    generate_output_video=True,
+    export_csv=True
+)
+
+# Access results
+print(f"Total visitors: {result['total_tracks']}")
+print(f"Conversion rate: {result['summary']['conversion_rate']}%")
+print(f"CSV saved to: {result['csv_path']}")
+```
+
+### Example 2: Real-time Detection
+
+```python
+from core.detection_engine import DetectionEngine
+import cv2
+
+engine = DetectionEngine()
+cap = cv2.VideoCapture(0)  # Webcam
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    
+    detections, _ = engine.detect_people(frame)
+    print(f"People in frame: {len(detections)}")
+    
+    # Visualize
+    annotated = engine.visualize_detections(frame, detections)
+    cv2.imshow('Detection', annotated)
+    
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+```
+
+### Example 3: Custom Alerts
+
+```python
+from core.alert_system import AlertSystem, AlertType, AlertLevel
+
+alert_system = AlertSystem()
+
+# Custom callback for alerts
+def on_alert(alert):
+    print(f"🚨 ALERT: {alert.message}")
+    # Send email, SMS, etc.
+
+alert_system.register_callback(on_alert)
+
+# Create custom alert
+alert_system.create_custom_alert(
+    alert_type=AlertType.SECURITY_OBJECT,
+    level=AlertLevel.CRITICAL,
+    message="Unattended bag detected",
+    details={"location": "checkout_zone"}
+)
+```
+
+### Example 4: Export Analytics
+
+```python
+from core.csv_exporter import DataExporter
+
+exporter = DataExporter()
+
+# Export to multiple formats
+files = exporter.create_daily_report(
+    analyzed_tracks=tracks,
+    video_info={"width": 1920, "height": 1080}
+)
+
+print(f"CSV: {files['csv']}")
+print(f"JSON: {files['json']}")
+print(f"Excel: {files['excel']}")
+```
+
+## 🧪 Testing
+
+### Run Tests
+
+```bash
+cd tests
+pytest test_tracker.py -v
+pytest test_behavior.py -v
+pytest test_exporter.py -v
+```
+
+### Test Individual Modules
+
+```python
+# Test detection
+python core/detection_engine.py
+
+# Test tracking
+python core/tracker.py
+
+# Test behavior analysis
+python core/behavior_analyzer.py
+```
+
+## 🐛 Troubleshooting
+
+### Issue: CUDA Out of Memory
+
+**Solution:** Use CPU instead or reduce video resolution
+```python
+engine = DetectionEngine(device='cpu')
+```
+
+### Issue: Model Download Fails
+
+**Solution:** Manually download model
+```bash
+wget https://github.com/ultralytics/assets/releases/download/v0.0.0/yolo11x.pt
+mv yolo11x.pt models/
+```
+
+### Issue: OpenCV Error
+
+**Solution:** Install headless version
+```bash
+pip uninstall opencv-python
+pip install opencv-python-headless
+```
+
+### Issue: Slow Processing
+
+**Solutions:**
+1. Use lighter model: `yolo11n.pt` or `yolo11s.pt`
+2. Increase `VIDEO_FPS_PROCESS` in config (process fewer frames)
+3. Enable GPU if available
+
+## 📊 Performance Benchmarks
+
+| Model | FPS (CPU) | FPS (GPU) | Accuracy |
+|-------|-----------|-----------|----------|
+| yolo11n | 30 | 120 | Good |
+| yolo11s | 20 | 90 | Better |
+| yolo11m | 12 | 60 | Great |
+| yolo11x | 5 | 30 | Best |
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Commit changes
+4. Push to branch
+5. Create Pull Request
+
+## 📄 License
+
+This project is part of the Eyeora AI-CCTV Platform.
+
+## 📞 Support
+
+For issues and questions, please check:
+- Documentation folder
+- GitHub Issues
+- Project Wiki
+
+---
+
+**Made with ❤️ by the Eyeora Team**
