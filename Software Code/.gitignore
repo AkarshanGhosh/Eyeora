@@ -1,0 +1,6 @@
+*.pt
+Software Code/Server/models/yolo11x.pt
+Software Code/Server/yolo11x.pt
+*.pt
+Server/*.pt
+Server/models/*.pt
