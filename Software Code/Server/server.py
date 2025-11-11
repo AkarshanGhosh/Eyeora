@@ -1,3 +1,9 @@
+"""
+Eyeora AI-CCTV Backend Server
+Main FastAPI server with integrated analytics and tracking
+Location: Software Code/Server/server.py
+"""
+
 import socket
 import uvicorn
 import psutil
@@ -7,17 +13,37 @@ import base64
 import io
 import numpy as np
 from datetime import datetime
+from pathlib import Path
 from PIL import Image
+from typing import Optional
 
-from fastapi import FastAPI, Form, UploadFile, File
+from fastapi import FastAPI, Form, UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from ultralytics import YOLO
 
-app = FastAPI()
+# Import core modules
+from core.config import (
+    MODEL_PATH, UPLOADS_DIR, PROCESSED_DIR, STATIC_DIR,
+    CONFIDENCE_THRESHOLD, MODELS_DIR
+)
+from core.detection_engine import DetectionEngine, ModelManager
+from core.video_processor import VideoProcessor
+from core.tracker import PersonTracker
+from core.behavior_analyzer import BehaviorAnalyzer
+from core.alert_system import AlertSystem
+from core.csv_exporter import DataExporter
+from utils.validators import validate_video_file, validate_image_file, sanitize_filename
+from utils.video_utils import get_video_info, validate_video
 
-# Add CORS middleware to allow frontend requests
+# Initialize FastAPI app
+app = FastAPI(
+    title="Eyeora AI-CCTV API",
+    description="Advanced AI-powered CCTV analytics system",
+    version="1.0.0"
+)
+
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,41 +53,58 @@ app.add_middleware(
 )
 
 # ----------------------------
-# Load YOLO Model Once
+# Global Instances
 # ----------------------------
-MODEL_PATH = "models/yolo11x.pt"
+print("🚀 Initializing Eyeora Backend...")
 
-# Download model if it doesn't exist
-if not os.path.exists(MODEL_PATH):
-    print(f"⬇️ Downloading {MODEL_PATH}...")
-    os.makedirs("models", exist_ok=True)
-    model = YOLO("yolo11x.pt")
-    model.save(MODEL_PATH)
-else:
-    model = YOLO(MODEL_PATH)
+# Detection engine
+detection_engine = None
+model_manager = ModelManager()
 
-print(f"✅ Loaded model: {MODEL_PATH}")
-print(f"📊 Model can detect {len(model.names)} classes: {list(model.names.values())[:10]}...")
+# Video processor
+video_processor = None
 
-# ----------------------------
-# Ensure folders exist
-# ----------------------------
-os.makedirs("uploads/images", exist_ok=True)
-os.makedirs("uploads/videos", exist_ok=True)
-os.makedirs("processed/images", exist_ok=True)
-os.makedirs("processed/videos", exist_ok=True)
-os.makedirs("static", exist_ok=True)  # For frontend files
+# Alert system
+alert_system = AlertSystem()
+
+# Data exporter
+data_exporter = DataExporter()
+
+# Live camera
+camera = None
+
+print("✅ Backend initialized")
 
 # ----------------------------
-# Mount static files (for serving frontend)
+# Initialize Detection Engine
 # ----------------------------
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+def get_detection_engine():
+    """Get or create detection engine"""
+    global detection_engine
+    if detection_engine is None:
+        print("📦 Loading detection engine...")
+        detection_engine = DetectionEngine()
+    return detection_engine
+
+def get_video_processor():
+    """Get or create video processor"""
+    global video_processor
+    if video_processor is None:
+        print("🎬 Loading video processor...")
+        video_processor = VideoProcessor()
+    return video_processor
 
 # ----------------------------
-# Utility: check LAN connection
+# Mount static files
+# ----------------------------
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# ----------------------------
+# Utility Functions
 # ----------------------------
 def lan_connected():
+    """Check if connected to LAN"""
     addrs = psutil.net_if_addrs()
     for iface, details in addrs.items():
         for addr in details:
@@ -69,10 +112,8 @@ def lan_connected():
                 return True
     return False
 
-# ----------------------------
-# Utility: get IP addresses
-# ----------------------------
 def get_ip_addresses():
+    """Get all IP addresses"""
     ips = {"localhost": "127.0.0.1"}
     addrs = psutil.net_if_addrs()
     for iface, details in addrs.items():
@@ -82,25 +123,153 @@ def get_ip_addresses():
     return ips
 
 # ----------------------------
-# Serve Frontend
+# Frontend Routes
 # ----------------------------
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve the main frontend HTML file"""
-    index_path = "index.html"
-    if os.path.exists(index_path):
+    index_path = Path("index.html")
+    if index_path.exists():
         with open(index_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     
-    # Fallback if index.html doesn't exist
+    # Fallback dashboard
     return """
     <html>
-        <body style="font-family: Arial; text-align: center; padding-top: 50px; background:#0f172a; color:#e2e8f0;">
-            <h1 style="color:#38bdf8;">🚀 Eyeora Backend Running</h1>
-            <p>✅ Backend is working!</p>
-            <p style="color:#ef4444;">⚠️ Frontend files (index.html, styles.css, script.js) not found.</p>
-            <p>Please create the frontend files in the same directory as server.py</p>
-            <p>Check API Docs: <a href="/docs" style="color:#38bdf8;">Swagger UI</a></p>
+        <head>
+            <title>Eyeora AI-CCTV</title>
+            <style>
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                    color: #e2e8f0;
+                    margin: 0;
+                    padding: 20px;
+                }
+                .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 40px;
+                }
+                h1 {
+                    color: #38bdf8;
+                    text-align: center;
+                    font-size: 3em;
+                    margin-bottom: 10px;
+                }
+                .subtitle {
+                    text-align: center;
+                    color: #94a3b8;
+                    margin-bottom: 40px;
+                }
+                .status-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 20px;
+                    margin-bottom: 40px;
+                }
+                .status-card {
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 10px;
+                    padding: 20px;
+                    border: 1px solid rgba(56, 189, 248, 0.2);
+                }
+                .status-card h3 {
+                    color: #38bdf8;
+                    margin-top: 0;
+                }
+                .feature-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                    gap: 20px;
+                }
+                .feature-card {
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 10px;
+                    padding: 25px;
+                    border-left: 4px solid #38bdf8;
+                }
+                .feature-card h3 {
+                    color: #38bdf8;
+                    margin-top: 0;
+                }
+                .api-link {
+                    display: inline-block;
+                    background: #38bdf8;
+                    color: #0f172a;
+                    padding: 15px 30px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    font-weight: bold;
+                    margin: 20px auto;
+                    text-align: center;
+                    display: block;
+                    width: fit-content;
+                }
+                .api-link:hover {
+                    background: #0ea5e9;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🚀 Eyeora AI-CCTV</h1>
+                <p class="subtitle">Advanced AI-Powered CCTV Analytics System</p>
+                
+                <div class="status-grid">
+                    <div class="status-card">
+                        <h3>✅ Backend Status</h3>
+                        <p>Server is running successfully!</p>
+                        <p>All systems operational</p>
+                    </div>
+                    <div class="status-card">
+                        <h3>🤖 AI Models</h3>
+                        <p>YOLO11 Detection Engine</p>
+                        <p>Person Tracking Active</p>
+                    </div>
+                    <div class="status-card">
+                        <h3>📊 Analytics</h3>
+                        <p>Behavior Analysis Ready</p>
+                        <p>Real-time Alerts Enabled</p>
+                    </div>
+                </div>
+                
+                <h2 style="color: #38bdf8; text-align: center; margin-top: 40px;">Features</h2>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>🎯 Person Detection</h3>
+                        <p>Real-time person detection and counting using state-of-the-art YOLO11 model</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>👥 Multi-Person Tracking</h3>
+                        <p>Track individuals throughout their entire store visit with unique IDs</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🛍️ Behavior Analysis</h3>
+                        <p>Automatic classification: Window Shopping, Browsing, Purchasing, Idle, Passing Through</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📍 Zone Detection</h3>
+                        <p>Monitor entry, exit, and checkout zones with intelligent area tracking</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🚨 Real-time Alerts</h3>
+                        <p>Crowd detection, loitering alerts, and suspicious behavior monitoring</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📈 Analytics & Reports</h3>
+                        <p>Comprehensive CSV/JSON/Excel exports with detailed visitor statistics</p>
+                    </div>
+                </div>
+                
+                <a href="/docs" class="api-link">📖 Open API Documentation</a>
+                
+                <div style="text-align: center; margin-top: 40px; color: #64748b;">
+                    <p>⚠️ Frontend files (index.html) not found in directory</p>
+                    <p>Place your frontend files in the server directory to access the full interface</p>
+                </div>
+            </div>
         </body>
     </html>
     """
@@ -108,27 +277,30 @@ async def root():
 @app.get("/styles.css")
 async def get_styles():
     """Serve CSS file"""
-    if os.path.exists("styles.css"):
-        return FileResponse("styles.css", media_type="text/css")
+    css_path = Path("styles.css")
+    if css_path.exists():
+        return FileResponse(css_path, media_type="text/css")
     return JSONResponse({"error": "styles.css not found"}, status_code=404)
 
 @app.get("/script.js")
 async def get_script():
     """Serve JavaScript file"""
-    if os.path.exists("script.js"):
-        return FileResponse("script.js", media_type="application/javascript")
+    js_path = Path("script.js")
+    if js_path.exists():
+        return FileResponse(js_path, media_type="application/javascript")
     return JSONResponse({"error": "script.js not found"}, status_code=404)
 
 @app.get("/config", response_class=HTMLResponse)
 async def config_form():
+    """Wi-Fi configuration form"""
     return """
     <html>
         <body style="font-family: Arial; text-align: center; padding-top: 50px; background:#0f172a; color:#e2e8f0;">
             <h1 style="color:#facc15;">Wi-Fi Config Mode</h1>
             <form action="/connect" method="post">
-              <input name="ssid" placeholder="SSID" required><br><br>
-              <input name="password" placeholder="Password" type="password" required><br><br>
-              <button type="submit">Connect</button>
+              <input name="ssid" placeholder="SSID" required style="padding: 10px; margin: 5px; border-radius: 5px;"><br><br>
+              <input name="password" placeholder="Password" type="password" required style="padding: 10px; margin: 5px; border-radius: 5px;"><br><br>
+              <button type="submit" style="padding: 10px 30px; background: #38bdf8; border: none; border-radius: 5px; cursor: pointer;">Connect</button>
             </form>
         </body>
     </html>
@@ -136,236 +308,243 @@ async def config_form():
 
 @app.post("/connect")
 async def connect_wifi(ssid: str = Form(...), password: str = Form(...)):
+    """Handle Wi-Fi connection (for ESP32)"""
     return {"status": "received", "ssid": ssid, "password": password}
 
 # ----------------------------
-# Detect Image
+# Detection Routes - Image
 # ----------------------------
 @app.post("/detect/image")
-async def detect_image(file: UploadFile = File(...)):
-    filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
-    uploaded_path = os.path.join("uploads/images", filename)
-
-    with open(uploaded_path, "wb") as f:
-        f.write(await file.read())
-
-    # Run detection
-    results = model(uploaded_path, conf=0.25, iou=0.45)
+async def detect_image(
+    file: UploadFile = File(...),
+    confidence: Optional[float] = Query(None, description="Detection confidence threshold"),
+    return_analytics: bool = Query(False, description="Return detailed analytics")
+):
+    """
+    Detect people in an uploaded image
     
-    # Get annotated image
-    annotated = results[0].plot()
-    processed_path = os.path.join("processed/images", filename)
-    cv2.imwrite(processed_path, annotated)
-
-    return {"status": "success", "annotated_file": f"/processed/images/{filename}"}
-
-# ----------------------------
-# Serve Processed Images
-# ----------------------------
-@app.get("/processed/images/{filename}")
-async def get_processed_image(filename: str):
-    file_path = os.path.join("processed/images", filename)
-    if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="image/jpeg")
-    return JSONResponse({"error": "File not found"}, status_code=404)
-
-# ----------------------------
-# Detect Video - FIXED VERSION WITH PROPER MP4 CREATION
-# ----------------------------
-@app.post("/detect/video")
-async def detect_video(file: UploadFile = File(...)):
+    - **file**: Image file (JPG, PNG)
+    - **confidence**: Detection threshold (0-1)
+    - **return_analytics**: Include detailed detection data
+    """
     try:
+        # Validate file
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        original_filename = file.filename
-        safe_filename = "".join(c for c in original_filename if c.isalnum() or c in "._- ")
-        
+        safe_filename = sanitize_filename(file.filename)
         filename = f"{timestamp}_{safe_filename}"
-        uploaded_path = os.path.join("uploads/videos", filename)
         
-        output_filename = f"detected_{timestamp}.avi"  # Use AVI format first
-        temp_output = os.path.join("processed/videos", output_filename)
-        final_output = os.path.join("processed/videos", f"detected_{timestamp}.mp4")
-
-        print(f"📥 Saving uploaded video to: {uploaded_path}")
+        # Save uploaded file
+        uploaded_path = UPLOADS_DIR / "images" / filename
+        uploaded_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # Save uploaded video
         with open(uploaded_path, "wb") as f:
             content = await file.read()
             f.write(content)
-
-        print(f"🔄 Processing video: {uploaded_path}")
-
-        # Open video file
-        cap = cv2.VideoCapture(uploaded_path)
         
-        if not cap.isOpened():
-            return JSONResponse({"error": "Could not open video file"}, status_code=400)
+        print(f"📥 Image uploaded: {uploaded_path}")
         
-        # Get video properties
-        fps = int(cap.get(cv2.CAP_PROP_FPS))
-        if fps <= 0 or fps > 120:
-            fps = 30
-            
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        # Validate image
+        is_valid, message = validate_image_file(str(uploaded_path))
+        if not is_valid:
+            return JSONResponse({"error": message}, status_code=400)
         
-        print(f"📊 Video properties: {width}x{height} @ {fps}fps, {total_frames} frames")
+        # Read image
+        image = cv2.imread(str(uploaded_path))
         
-        # Use MJPEG codec for AVI - MOST RELIABLE without FFmpeg
-        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        out = cv2.VideoWriter(temp_output, fourcc, fps, (width, height))
+        # Get detection engine
+        engine = get_detection_engine()
         
-        if not out.isOpened():
-            # Fallback to uncompressed AVI
-            print("⚠️ MJPEG failed, trying uncompressed...")
-            fourcc = cv2.VideoWriter_fourcc(*'IYUV')
-            out = cv2.VideoWriter(temp_output, fourcc, fps, (width, height))
+        # Detect people
+        detections, crops = engine.detect_people(
+            image, 
+            confidence=confidence,
+            return_crops=return_analytics
+        )
         
-        if not out.isOpened():
-            cap.release()
-            return JSONResponse({"error": "Could not initialize video writer"}, status_code=500)
+        print(f"✅ Detected {len(detections)} people")
         
-        frame_count = 0
-        processed_frames = []
+        # Annotate image
+        annotated = engine.visualize_detections(image, detections)
         
-        print("🎬 Starting frame processing...")
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            
-            # Run detection on frame
-            results = model(frame, conf=0.25, iou=0.45, verbose=False)
-            annotated_frame = results[0].plot()
-            
-            # Write frame
-            out.write(annotated_frame)
-            
-            # Store some frames for verification
-            if frame_count < 5:  # Store first 5 frames
-                processed_frames.append(annotated_frame.copy())
-            
-            frame_count += 1
-            if frame_count % 30 == 0:
-                progress = int(frame_count/total_frames*100) if total_frames > 0 else 0
-                print(f"⏳ Processed {frame_count}/{total_frames} frames ({progress}%)")
-
-        cap.release()
-        out.release()
+        # Save annotated image
+        processed_path = PROCESSED_DIR / "images" / filename
+        processed_path.parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(processed_path), annotated)
         
-        # Verify the output file
-        if not os.path.exists(temp_output) or os.path.getsize(temp_output) < 1024:
-            return JSONResponse({"error": "Output video file is empty or invalid"}, status_code=500)
-        
-        file_size = os.path.getsize(temp_output)
-        print(f"✅ Video processing complete: {temp_output}")
-        print(f"📦 Output file size: {file_size} bytes ({file_size/1024/1024:.2f} MB)")
-        
-        # Try to convert AVI to MP4 using pure OpenCV (if possible)
-        try:
-            print("🔄 Converting to browser-compatible format...")
-            cap_avi = cv2.VideoCapture(temp_output)
-            fourcc_mp4 = cv2.VideoWriter_fourcc(*'mp4v')
-            out_mp4 = cv2.VideoWriter(final_output, fourcc_mp4, fps, (width, height))
-            
-            if out_mp4.isOpened():
-                convert_count = 0
-                while cap_avi.isOpened():
-                    ret, frame = cap_avi.read()
-                    if not ret:
-                        break
-                    out_mp4.write(frame)
-                    convert_count += 1
-                    if convert_count % 30 == 0:
-                        print(f"⏳ Converting {convert_count}/{frame_count} frames")
-                
-                cap_avi.release()
-                out_mp4.release()
-                
-                # Check if MP4 conversion worked
-                if os.path.exists(final_output) and os.path.getsize(final_output) > 1024:
-                    print("✅ Successfully converted to MP4")
-                    os.remove(temp_output)  # Remove AVI file
-                    output_file = final_output
-                    output_filename = f"detected_{timestamp}.mp4"
-                else:
-                    print("⚠️ MP4 conversion produced invalid file, using AVI")
-                    os.remove(final_output) if os.path.exists(final_output) else None
-                    output_file = temp_output
-            else:
-                print("⚠️ Could not create MP4 writer, using AVI")
-                cap_avi.release()
-                output_file = temp_output
-                
-        except Exception as e:
-            print(f"⚠️ Conversion error: {e}, using AVI")
-            output_file = temp_output
-        
-        final_size = os.path.getsize(output_file)
-        print(f"📦 Final output: {output_file} ({final_size/1024/1024:.2f} MB)")
-
-        return {
-            "status": "success", 
-            "annotated_file": f"/processed/videos/{os.path.basename(output_file)}",
-            "frames_processed": frame_count,
-            "codec_used": "MJPEG/AVI",
-            "video_info": {
-                "width": width,
-                "height": height,
-                "fps": fps,
-                "total_frames": frame_count,
-                "file_size_mb": round(final_size/1024/1024, 2)
-            }
+        response = {
+            "status": "success",
+            "people_count": len(detections),
+            "annotated_file": f"/processed/images/{filename}",
+            "original_file": f"/uploads/images/{filename}",
+            "timestamp": timestamp
         }
         
+        if return_analytics:
+            response["detections"] = [
+                {
+                    "bbox": det.bbox,
+                    "confidence": det.confidence,
+                    "center": det.center,
+                    "area": det.area
+                }
+                for det in detections
+            ]
+        
+        return response
+        
     except Exception as e:
-        print(f"❌ Error processing video: {str(e)}")
+        print(f"❌ Image detection error: {str(e)}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# ----------------------------
+# Detection Routes - Video with Full Analytics
+# ----------------------------
+@app.post("/detect/video")
+async def detect_video(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    generate_output: bool = Query(True, description="Generate annotated output video"),
+    export_csv: bool = Query(True, description="Export analytics to CSV"),
+    confidence: Optional[float] = Query(None, description="Detection confidence threshold")
+):
+    """
+    Process video with full people tracking and behavior analysis
+    
+    - **file**: Video file (MP4, AVI, MOV, etc.)
+    - **generate_output**: Create annotated output video
+    - **export_csv**: Export analytics data
+    - **confidence**: Detection threshold
+    """
+    try:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        safe_filename = sanitize_filename(file.filename)
+        filename = f"{timestamp}_{safe_filename}"
+        
+        # Save uploaded file
+        uploaded_path = UPLOADS_DIR / "videos" / filename
+        uploaded_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        print(f"📥 Uploading video: {filename}")
+        
+        with open(uploaded_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+        
+        print(f"✅ Upload complete: {uploaded_path}")
+        
+        # Validate video
+        is_valid, message = validate_video(str(uploaded_path))
+        if not is_valid:
+            return JSONResponse({"error": message}, status_code=400)
+        
+        # Get video info
+        video_info = get_video_info(str(uploaded_path))
+        print(f"📊 Video: {video_info['width']}x{video_info['height']} @ {video_info['fps']:.2f}fps")
+        
+        # Get video processor
+        processor = get_video_processor()
+        
+        # Process video with full analytics
+        output_path = None
+        if generate_output:
+            output_filename = f"analyzed_{timestamp}.mp4"
+            output_path = str(PROCESSED_DIR / "videos" / output_filename)
+        
+        print("🎬 Starting video processing with analytics...")
+        
+        result = processor.process_video(
+            video_path=str(uploaded_path),
+            output_path=output_path,
+            generate_output_video=generate_output,
+            export_csv=export_csv
+        )
+        
+        # Prepare response
+        response = {
+            "status": "success",
+            "video_info": result["video_info"],
+            "processing_time": result["processing_time"],
+            "analytics": {
+                "total_visitors": result["total_tracks"],
+                "conversion_rate": result["summary"]["conversion_rate"],
+                "avg_visit_duration": result["summary"]["avg_visit_duration"],
+                "purchasers": result["summary"]["purchasers"],
+                "window_shoppers": result["summary"]["window_shoppers"],
+                "browsers": result["summary"]["browsers"],
+                "passing_through": result["summary"]["passing_through"],
+                "idle": result["summary"]["idle"]
+            },
+            "files": {}
+        }
+        
+        if generate_output and result["output_video_path"]:
+            output_filename = Path(result["output_video_path"]).name
+            response["files"]["annotated_video"] = f"/processed/videos/{output_filename}"
+        
+        if export_csv and result["csv_path"]:
+            csv_filename = Path(result["csv_path"]).name
+            response["files"]["csv_report"] = f"/data/csv/{csv_filename}"
+        
+        return response
+        
+    except Exception as e:
+        print(f"❌ Video processing error: {str(e)}")
         import traceback
         traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
 
 # ----------------------------
-# Serve Processed Videos - HANDLES BOTH AVI AND MP4
+# Serve Processed Files
 # ----------------------------
+@app.get("/processed/images/{filename}")
+async def get_processed_image(filename: str):
+    """Serve processed image"""
+    file_path = PROCESSED_DIR / "images" / filename
+    if file_path.exists():
+        return FileResponse(file_path, media_type="image/jpeg")
+    return JSONResponse({"error": "File not found"}, status_code=404)
+
 @app.get("/processed/videos/{filename}")
 async def get_processed_video(filename: str):
-    file_path = os.path.join("processed/videos", filename)
-    if not os.path.exists(file_path):
+    """Serve processed video"""
+    file_path = PROCESSED_DIR / "videos" / filename
+    if not file_path.exists():
         return JSONResponse({"error": "File not found"}, status_code=404)
     
-    file_size = os.path.getsize(file_path)
-    print(f"📹 Serving video: {filename} ({file_size} bytes)")
-    
-    # Determine media type based on extension
     media_type = "video/mp4" if filename.endswith('.mp4') else "video/x-msvideo"
     
     return FileResponse(
-        file_path, 
+        file_path,
         media_type=media_type,
         headers={
             "Accept-Ranges": "bytes",
-            "Content-Type": media_type,
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0"
+            "Content-Type": media_type
         }
     )
 
-# ----------------------------
-# Live Stream
-# ----------------------------
-camera = None
+@app.get("/data/csv/{filename}")
+async def get_csv_file(filename: str):
+    """Serve CSV export file"""
+    from core.config import DATA_DIR
+    file_path = DATA_DIR / "csv" / filename
+    if file_path.exists():
+        return FileResponse(file_path, media_type="text/csv")
+    return JSONResponse({"error": "File not found"}, status_code=404)
 
+# ----------------------------
+# Live Camera Feed
+# ----------------------------
 def get_camera():
+    """Get or create camera instance"""
     global camera
     if camera is None or not camera.isOpened():
         camera = cv2.VideoCapture(0)
         if not camera.isOpened():
-            print("Warning: Could not open camera")
+            print("⚠️ Warning: Could not open camera")
     return camera
 
 def generate_frames():
+    """Generate frames for live stream"""
     cam = get_camera()
     while True:
         success, frame = cam.read()
@@ -376,36 +555,111 @@ def generate_frames():
 
 @app.get("/video_feed")
 def video_feed():
-    return StreamingResponse(generate_frames(), media_type="multipart/x-mixed-replace; boundary=frame")
+    """Live camera stream endpoint"""
+    return StreamingResponse(
+        generate_frames(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
 
 # ----------------------------
-# Detect Per Frame (Live Detection)
+# Live Detection (Frame-by-frame)
 # ----------------------------
 @app.post("/detect/frame")
 async def detect_frame(data: dict):
+    """
+    Detect people in a single frame (for live detection)
+    Receives base64 encoded image
+    """
     try:
         # Decode base64 image
         img_data = base64.b64decode(data["image"].split(",")[1])
         img = Image.open(io.BytesIO(img_data)).convert("RGB")
         img_array = np.array(img)
-
-        # Run detection
-        results = model(img_array, conf=0.25, iou=0.45, verbose=False)
-
-        # Extract detections
-        detections = []
-        for box in results[0].boxes:
-            detections.append({
-                "class": results[0].names[int(box.cls)],
-                "confidence": float(box.conf),
-                "bbox": box.xyxy.tolist()[0]
+        
+        # Get detection engine
+        engine = get_detection_engine()
+        
+        # Detect people only
+        detections, _ = engine.detect_people(img_array)
+        
+        # Format response
+        detection_list = []
+        for det in detections:
+            detection_list.append({
+                "class": det.class_name,
+                "confidence": float(det.confidence),
+                "bbox": det.bbox,
+                "center": det.center
             })
-
-        return {"detections": detections}
+        
+        return {
+            "success": True,
+            "people_count": len(detections),
+            "detections": detection_list
+        }
         
     except Exception as e:
-        print(f"Frame detection error: {str(e)}")
+        print(f"❌ Frame detection error: {str(e)}")
         return {"error": str(e), "detections": []}
+
+# ----------------------------
+# Analytics Endpoints
+# ----------------------------
+@app.get("/analytics/summary")
+async def get_analytics_summary():
+    """Get current analytics summary"""
+    # This would typically query from a database
+    # For now, return a placeholder
+    return {
+        "total_visitors_today": 0,
+        "conversion_rate": 0.0,
+        "avg_visit_duration": 0.0,
+        "active_alerts": len(alert_system.get_active_alerts())
+    }
+
+@app.get("/analytics/alerts")
+async def get_alerts(
+    active_only: bool = Query(True, description="Only show active alerts"),
+    limit: int = Query(50, description="Maximum alerts to return")
+):
+    """Get alerts from alert system"""
+    if active_only:
+        alerts = alert_system.get_active_alerts()
+    else:
+        alerts = alert_system.get_alert_history(limit=limit)
+    
+    return {
+        "alerts": [alert.to_dict() for alert in alerts],
+        "count": len(alerts),
+        "statistics": alert_system.get_statistics()
+    }
+
+# ----------------------------
+# System Status
+# ----------------------------
+@app.get("/status")
+async def system_status():
+    """Get system status and information"""
+    return {
+        "status": "online",
+        "modules": {
+            "detection_engine": detection_engine is not None,
+            "video_processor": video_processor is not None,
+            "alert_system": True,
+            "data_exporter": True
+        },
+        "model_info": detection_engine.get_model_info() if detection_engine else None,
+        "ip_addresses": get_ip_addresses(),
+        "lan_connected": lan_connected()
+    }
+
+# ----------------------------
+# Health Check
+# ----------------------------
+@app.get("/health")
+async def health_check():
+    """Simple health check endpoint"""
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 # ----------------------------
 # Run Server
@@ -413,17 +667,29 @@ async def detect_frame(data: dict):
 if __name__ == "__main__":
     port = 8000
     ips = get_ip_addresses()
-
-    print("\n" + "="*60)
-    print("🚀 Eyeora Backend Server Starting...")
-    print("="*60)
-    print(f"👉 Local access: http://127.0.0.1:{port}")
+    
+    print("\n" + "="*70)
+    print("🚀 EYEORA AI-CCTV BACKEND SERVER")
+    print("="*70)
+    print(f"📡 Local access:     http://127.0.0.1:{port}")
     for iface, ip in ips.items():
         if iface != "localhost":
-            print(f"👉 Network access ({iface}): http://{ip}:{port}")
-    print(f"👉 API Docs: http://127.0.0.1:{port}/docs")
-    print("="*60)
-    print("\n💡 Place index.html, styles.css, and script.js in the same directory")
-    print("💡 Then open: http://127.0.0.1:8000 in your browser\n")
-
+            print(f"📡 Network ({iface:8s}): http://{ip}:{port}")
+    print(f"📖 API Docs:         http://127.0.0.1:{port}/docs")
+    print(f"📊 System Status:    http://127.0.0.1:{port}/status")
+    print("="*70)
+    print("\n✨ Features Enabled:")
+    print("  ✅ Person Detection & Tracking")
+    print("  ✅ Behavior Analysis (5 types)")
+    print("  ✅ Zone Detection (Entry/Exit/Checkout)")
+    print("  ✅ Real-time Alerts")
+    print("  ✅ CSV/JSON/Excel Export")
+    print("  ✅ Live Camera Feed")
+    print("  ✅ Video Processing with Analytics")
+    print("\n💡 Tips:")
+    print("  • Place index.html in this directory for custom frontend")
+    print("  • Upload videos to /detect/video for full analytics")
+    print("  • Check /docs for complete API documentation")
+    print("\n" + "="*70 + "\n")
+    
     uvicorn.run("server:app", host="0.0.0.0", port=port, reload=True)

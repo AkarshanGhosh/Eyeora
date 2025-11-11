@@ -11,14 +11,14 @@ from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 from ultralytics import YOLO
 
-from config import (
+from core.config import (
     MODEL_PATH, CONFIDENCE_THRESHOLD, IOU_THRESHOLD,
     VIDEO_FPS_PROCESS, VIDEO_OUTPUT_FPS, PROCESSED_DIR,
     YOLO_MODEL, MODELS_DIR
 )
-from tracker import PersonTracker, Detection, Track
-from behavior_analyzer import BehaviorAnalyzer, draw_zones
-from csv_exporter import DataExporter
+from core.tracker import PersonTracker, Detection, Track
+from core.behavior_analyzer import BehaviorAnalyzer, draw_zones
+from core.csv_exporter import DataExporter
 
 
 class VideoProcessor:

@@ -1,14 +1,15 @@
 """
 Shopping Behavior Analysis Module
 Determines customer behavior: window shopping, browsing, purchasing
+Location: Software Code/Server/core/behavior_analyzer.py
 """
 
 import numpy as np
 from typing import List, Dict, Tuple
 from enum import Enum
 
-from tracker import Track
-from config import (
+from core.tracker import Track
+from core.config import (
     ENTRY_ZONE, EXIT_ZONE, CHECKOUT_ZONE,
     IDLE_TIME_THRESHOLD, BROWSING_TIME_THRESHOLD,
     BEHAVIOR_TYPES

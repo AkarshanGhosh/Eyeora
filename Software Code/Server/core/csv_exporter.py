@@ -1,6 +1,7 @@
 """
 CSV Export Module for Analytics Data
 Exports tracking and behavior data to CSV, JSON, and Excel formats
+Location: Software Code/Server/core/csv_exporter.py
 """
 
 import csv
@@ -9,7 +10,8 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
-from config import DATA_DIR, CSV_COLUMNS, REPORTS_DIR
+
+from core.config import DATA_DIR, CSV_COLUMNS, REPORTS_DIR
 
 
 class DataExporter:
@@ -193,7 +195,7 @@ class DataExporter:
     
     def _create_summary_file(self, analyzed_tracks: List[Dict], data_filename: str):
         """Create a summary statistics file"""
-        from behavior_analyzer import BehaviorAnalyzer
+        from core.behavior_analyzer import BehaviorAnalyzer
         
         # Calculate summary (need frame dimensions, using defaults)
         analyzer = BehaviorAnalyzer(1920, 1080)
@@ -258,7 +260,7 @@ class DataExporter:
         base_filename = f"daily_report_{timestamp}"
         
         # Calculate summary
-        from behavior_analyzer import BehaviorAnalyzer
+        from core.behavior_analyzer import BehaviorAnalyzer
         analyzer = BehaviorAnalyzer(
             video_info.get('width', 1920) if video_info else 1920,
             video_info.get('height', 1080) if video_info else 1080
