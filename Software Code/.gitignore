@@ -4,3 +4,6 @@ Software Code/Server/yolo11x.pt
 *.pt
 Server/*.pt
 Server/models/*.pt
+*.pt
+Server/*.pt
+Server/models/*.pt
