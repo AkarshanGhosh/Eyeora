@@ -4,6 +4,7 @@ Main FastAPI server with integrated analytics and tracking
 Location: Software Code/Server/server.py
 """
 
+
 import socket
 import uvicorn
 import psutil
@@ -16,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from PIL import Image
 from typing import Optional
+from api.routes import auth_routes
 
 from fastapi import FastAPI, Form, UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse, FileResponse
@@ -55,6 +57,8 @@ app = FastAPI(
     description="Advanced AI-powered CCTV analytics system",
     version="1.0.0"
 )
+# Include auth routes
+app.include_router(auth_routes.router)
 
 # Add CORS middleware
 app.add_middleware(
