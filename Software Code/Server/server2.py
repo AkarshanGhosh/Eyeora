@@ -36,6 +36,19 @@ from core.csv_exporter import DataExporter
 from utils.validators import validate_video_file, validate_image_file, sanitize_filename
 from utils.video_utils import get_video_info, validate_video
 
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# NEW: DB imports (ADDED — non-breaking)
+# Requires: db/connection.py and db/startup/create_indexes.py
+try:
+    from db.connection import lifespan_connect, lifespan_close, get_db
+    from db.startup.create_indexes import create_indexes
+    _DB_AVAILABLE = True
+except Exception as _e:
+    print("⚠️  DB modules not found or failed to import. MongoDB will be unavailable until fixed.")
+    print(f"   ↳ {_e}")
+    _DB_AVAILABLE = False
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Eyeora AI-CCTV API",
@@ -142,7 +155,7 @@ def get_primary_ipv4() -> str:
     finally:
         s.close()
 
-def get_all_ipv4_filtered() -> dict:
+def get_all_ipv4_filtered():
     """
     Return a dict of iface -> IPv4 skipping loopback, virtual,
     and interfaces that are down.
@@ -357,6 +370,29 @@ async def config_form():
 async def connect_wifi(ssid: str = Form(...), password: str = Form(...)):
     """Handle Wi-Fi connection (for ESP32)"""
     return {"status": "received", "ssid": ssid, "password": password}
+
+# ----------------------------
+# NEW: DB Startup & Shutdown hooks (ADDED)
+# ----------------------------
+if _DB_AVAILABLE:
+    @app.on_event("startup")
+    async def _startup_db():
+        try:
+            await lifespan_connect()
+            db = await get_db()
+            await create_indexes(db)
+            print("✅ MongoDB connected (Motor async) and indexes ensured.")
+        except Exception as e:
+            print("❌ MongoDB failed to connect on startup.")
+            print(f"   ↳ {e}")
+
+    @app.on_event("shutdown")
+    async def _shutdown_db():
+        try:
+            await lifespan_close()
+        except Exception as e:
+            print("⚠️  MongoDB shutdown encountered an issue.")
+            print(f"   ↳ {e}")
 
 # ----------------------------
 # Detection Routes - Image
@@ -714,6 +750,25 @@ async def ip_info():
     }
 
 # ----------------------------
+# NEW: DB quick ping endpoint (ADDED)
+# ----------------------------
+@app.get("/db/ping")
+async def db_ping():
+    """
+    Quick DB health check.
+    Returns ok: True if MongoDB responds to ping.
+    """
+    if not _DB_AVAILABLE:
+        return {"ok": False, "message": "DB modules not available"}
+    try:
+        db = await get_db()
+        # run a lightweight ping
+        await db.command("ping")
+        return {"ok": True, "message": "MongoDB reachable"}
+    except Exception as e:
+        return {"ok": False, "message": f"MongoDB error: {e}"}
+
+# ----------------------------
 # Health Check
 # ----------------------------
 @app.get("/health")
@@ -756,6 +811,8 @@ if __name__ == "__main__":
             print(f"📡 Network ({iface:8s}): http://{ip}:{port}")
     print(f"📖 API Docs:         http://127.0.0.1:{port}/docs")
     print(f"📊 System Status:    http://127.0.0.1:{port}/status")
+    if _DB_AVAILABLE:
+        print(f"🗄️  DB Health:        http://127.0.0.1:{port}/db/ping")
     print("="*70)
     print("\n✨ Features Enabled:")
     print("  ✅ Person Detection & Tracking")
@@ -769,6 +826,8 @@ if __name__ == "__main__":
     print("  • Place index.html in this directory for custom frontend")
     print("  • Upload videos to /detect/video for full analytics")
     print("  • Check /docs for complete API documentation")
+    if _DB_AVAILABLE:
+        print("  • Use /db/ping to verify MongoDB connectivity while running")
     print("\n" + "="*70 + "\n")
     
     # Bind to all interfaces so other devices can reach it
