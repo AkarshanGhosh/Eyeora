@@ -3,7 +3,17 @@ Eyeora AI-CCTV Backend Server
 Main FastAPI server with integrated analytics and tracking
 Location: Software Code/Server/server.py
 """
-
+# add this block at the very top of server2.py
+import sys
+from pathlib import Path as _Path
+_THIS = _Path(__file__).resolve()
+_ROOT = _THIS.parent                # ...\server
+_PARENT = _ROOT.parent              # ...\ (project parent, possibly contains 'Server')
+for p in (_ROOT, _PARENT):
+    sp = str(p)
+    if sp not in sys.path:
+        sys.path.insert(0, sp)
+# ----------------------------
 
 import socket
 import uvicorn
@@ -835,4 +845,5 @@ if __name__ == "__main__":
     print("\n" + "="*70 + "\n")
     
     # Bind to all interfaces so other devices can reach it
-    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("server2:app", host="0.0.0.0", port=port, reload=True)
+

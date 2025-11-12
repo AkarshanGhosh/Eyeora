@@ -1,32 +1,47 @@
 # api/repositories/user_repo.py
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from bson import ObjectId
 from typing import Optional
+from datetime import datetime
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from security.hash.get_password_hash import get_password_hash
+class UserRepository:
+    """
+    Thin CRUD wrapper around the `users` collection.
+    Stores hashed passwords. Never store plaintext.
+    """
+    def __init__(self, db: AsyncIOMotorDatabase):
+        self.col = db["users"]
 
-async def create_user(db: AsyncIOMotorDatabase, email: str, password: str, full_name: str = "", role: str = "user"):
-    """Create a new user document with hashed password"""
-    existing = await db["users"].find_one({"email": email})
-    if existing:
-        raise ValueError("User already exists")
+    async def get_by_email(self, email: str) -> Optional[dict]:
+        return await self.col.find_one({"email": email})
 
-    user_doc = {
-        "email": email,
-        "password": get_password_hash(password),
-        "full_name": full_name,
-        "role": role
-    }
+    async def get_by_id(self, user_id: str) -> Optional[dict]:
+        return await self.col.find_one({"_id": user_id})
 
-    result = await db["users"].insert_one(user_doc)
-    user_doc["_id"] = str(result.inserted_id)
-    del user_doc["password"]
-    return user_doc
+    async def create_user(
+        self,
+        *,
+        email: str,
+        hashed_password: str,
+        full_name: Optional[str] = None,
+        role: str = "user",
+    ) -> dict:
+        doc = {
+            "_id": email.lower(),              # use email as id for simplicity
+            "email": email.lower(),
+            "password": hashed_password,
+            "full_name": full_name,
+            "role": role,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+            "is_active": True,
+        }
+        await self.col.insert_one(doc)
+        return doc
 
-async def find_by_email(db: AsyncIOMotorDatabase, email: str) -> Optional[dict]:
-    """Find user by email"""
-    user = await db["users"].find_one({"email": email})
-    if not user:
-        return None
-    user["_id"] = str(user["_id"])
-    return user
+    async def set_last_login(self, email: str) -> None:
+        await self.col.update_one(
+            {"email": email.lower()},
+            {"$set": {"last_login": datetime.utcnow()}}
+        )
+
+__all__ = ["UserRepository"]
