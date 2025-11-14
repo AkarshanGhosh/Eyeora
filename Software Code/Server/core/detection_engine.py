@@ -19,6 +19,33 @@ from core.tracker import Detection
 
 
 class DetectionEngine:
+    def __init__(
+        self,
+        model_name: str = None,
+        confidence_threshold: float = None,
+        iou_threshold: float = None,
+        device: str = None
+    ):
+        self.model_name = model_name or YOLO_MODEL
+        self.confidence_threshold = confidence_threshold or CONFIDENCE_THRESHOLD
+        self.iou_threshold = iou_threshold or IOU_THRESHOLD
+
+        # ✅ Safe device selection
+        if device is None:
+            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        else:
+            if device == 'cuda' and not torch.cuda.is_available():
+                print("⚠️ CUDA requested but not available in this PyTorch build. Falling back to CPU.")
+                self.device = 'cpu'
+            else:
+                self.device = device
+
+        print("🚀 Initializing Detection Engine...")
+        print(f"📱 Device: {self.device.upper()}")
+
+        self.model = self._load_model()
+        self.model_loaded = True
+        print("✅ Detection Engine Ready")
     """
     YOLO-based detection engine with automatic model management
     Supports multiple detection modes and custom configurations

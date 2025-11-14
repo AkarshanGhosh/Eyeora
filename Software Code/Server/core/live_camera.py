@@ -233,8 +233,23 @@ class LiveCameraSystem:
         self.camera = None
         
         # Detection and tracking
-        self.detection_engine = DetectionEngine()
+        # Use YOLO11 nano on CUDA for live camera to maximize FPS
+        self.detection_engine = DetectionEngine(
+        model_name='yolo11n.pt',
+        confidence_threshold=0.5,
+        device=None   # or just remove the device argument entirely
+        )
         self.tracker = PersonTracker() if enable_tracking else None
+
+        # 🔹 Detect only a subset of COCO classes for higher FPS
+        # COCO IDs:
+        #   0  = person
+        #   39 = bottle
+        #   43 = knife
+        #   63 = laptop
+        #   67 = cell phone
+        # NOTE: Standard COCO model does NOT have a "gun" class – that needs a custom model.
+        self.object_classes = [0, 39, 43, 63, 67]
         
         # Advanced features
         self.pose_estimator = PoseEstimator() if enable_pose else None
@@ -271,6 +286,9 @@ class LiveCameraSystem:
         self.skip_pose_frames = 0
         self.skip_clothing_frames = 0
         self.process_every_n_frames = 1  # Process every frame for real-time
+        # Limit classes for faster inference (COCO IDs)
+        self.object_classes = [0, 39, 43, 63, 67]  # person, bottle, knife, laptop, cell phone
+
         
         print("✅ Live Camera System initialized (Optimized)")
         print(f"   Pose: {'ON' if enable_pose else 'OFF (disabled for performance)'}")
@@ -286,8 +304,9 @@ class LiveCameraSystem:
                 return False
             
             # Optimize camera settings for speed
-            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Lower resolution for speed
-            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            # You can switch these back to 640x480 if FPS is already good.
+            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 480)  # Lower resolution for speed
+            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
             self.camera.set(cv2.CAP_PROP_FPS, 30)
             self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer
             
@@ -295,7 +314,7 @@ class LiveCameraSystem:
             self.start_time = time.time()
             self.last_fps_time = time.time()
             
-            print(f"✅ Camera {self.camera_index} started (640x480 @ 30fps)")
+            print(f"✅ Camera {self.camera_index} started (480x360 @ 30fps)")
             return True
             
         except Exception as e:
@@ -328,10 +347,10 @@ class LiveCameraSystem:
         timestamp = time.time()
         processed = frame.copy()
         
-        # 1. ALL OBJECT DETECTION (People + Objects in one pass)
+        # 1. ALL OBJECT DETECTION (People + Selected Objects in one pass)
         all_detections = self.detection_engine.detect_all_objects(
             frame,
-            classes=None  # Detect all classes
+            classes=self.object_classes  # 🔹 Limit classes for higher FPS
         )
         
         # Separate people and objects
@@ -592,7 +611,7 @@ if __name__ == "__main__":
     print("✅ Live Camera System Module Ready (Optimized)")
     print("🎥 Features:")
     print("  - Real-time person detection (30+ FPS)")
-    print("  - Multi-object detection (80 classes)")
+    print("  - Multi-object detection (subset of COCO classes)")
     print("  - Multi-person tracking")
     print("  - Pose estimation (optional)")
     print("  - Clothing classification")

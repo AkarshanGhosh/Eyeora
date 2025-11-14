@@ -51,7 +51,7 @@ class TestGUI:
         self.live_camera = None
         self.camera_running = False
         self.show_live_detections = tk.BooleanVar(value=True)
-        self.show_live_pose = tk.BooleanVar(value=True)
+        self.show_live_pose = tk.BooleanVar(value=False) #false for now
         self.show_live_stats = tk.BooleanVar(value=True)
         
         # Test status
@@ -802,6 +802,14 @@ PEOPLE DETECTED: {stats['people_detected']}
         if self.live_camera:
             state = self.live_camera.toggle_stats()
             print(f"✅ Stats overlay: {'ON' if state else 'OFF'}")
+    
+    def _toggle_live_objects(self):
+        """Toggle object overlay display"""
+        if self.live_camera:
+            state = self.live_camera.toggle_objects()
+            # Keep the Tkinter BooleanVar in sync with backend state
+            self.show_live_objects.set(state)
+            print(f"✅ Objects overlay: {'ON' if state else 'OFF'}")
     
     # ===== Utility Methods =====
     
