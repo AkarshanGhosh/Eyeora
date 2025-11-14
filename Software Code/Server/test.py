@@ -1,6 +1,6 @@
 """
-Tkinter Test GUI - Automated Testing Interface
-Tests all modules and generates comprehensive results
+Tkinter Test GUI - Automated Testing Interface with Live Camera
+Tests all modules and provides live camera testing
 Location: Software Code/Server/test_gui.py
 """
 
@@ -12,6 +12,8 @@ from pathlib import Path
 from datetime import datetime
 import sys
 import os
+import cv2
+from PIL import Image, ImageTk
 
 # Add core modules to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -22,27 +24,35 @@ from core.behavior_analyzer import BehaviorAnalyzer
 from core.csv_exporter import DataExporter
 from core.tracker import PersonTracker
 from core.alert_system import AlertSystem
+from core.live_camera import LiveCameraSystem
 from core.config import PROCESSED_DIR, DATA_DIR
 
 
 class TestGUI:
     """
-    Automated Testing GUI with Tkinter
+    Automated Testing GUI with Tkinter + Live Camera
     """
     
     def __init__(self, root):
         self.root = root
-        self.root.title("🎯 Eyeora AI-CCTV - Automated Test Suite")
-        self.root.geometry("900x700")
+        self.root.title("🎯 Eyeora AI-CCTV - Test Suite & Live Camera")
+        self.root.geometry("1100x750")
         self.root.resizable(True, True)
         
-        # Variables
+        # Test variables
         self.test_mode = tk.StringVar(value="video")
         self.input_file = tk.StringVar()
         self.confidence = tk.DoubleVar(value=0.4)
         self.generate_output = tk.BooleanVar(value=True)
         self.export_csv = tk.BooleanVar(value=True)
         self.show_zones = tk.BooleanVar(value=True)
+        
+        # Live camera variables
+        self.live_camera = None
+        self.camera_running = False
+        self.show_live_detections = tk.BooleanVar(value=True)
+        self.show_live_pose = tk.BooleanVar(value=True)
+        self.show_live_stats = tk.BooleanVar(value=True)
         
         # Test status
         self.is_testing = False
@@ -56,15 +66,32 @@ class TestGUI:
         self._setup_ui()
         
     def _setup_ui(self):
-        """Setup the user interface"""
+        """Setup the user interface with tabs"""
+        
+        # Create notebook (tabs)
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Tab 1: File Testing
+        self.test_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.test_tab, text="📁 File Testing")
+        self._setup_test_tab()
+        
+        # Tab 2: Live Camera
+        self.camera_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.camera_tab, text="📹 Live Camera")
+        self._setup_camera_tab()
+        
+    def _setup_test_tab(self):
+        """Setup file testing tab"""
         
         # Main container
-        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame = ttk.Frame(self.test_tab, padding="10")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configure grid weights
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
+        self.test_tab.columnconfigure(0, weight=1)
+        self.test_tab.rowconfigure(0, weight=1)
         main_frame.columnconfigure(0, weight=1)
         main_frame.rowconfigure(6, weight=1)
         
@@ -208,7 +235,7 @@ class TestGUI:
         # Scrolled text for logs
         self.log_text = scrolledtext.ScrolledText(
             log_frame, 
-            height=15, 
+            height=10, 
             width=80,
             wrap=tk.WORD,
             font=("Courier", 9)
@@ -241,7 +268,96 @@ class TestGUI:
         self._log("🎯 Eyeora AI-CCTV Test Suite Initialized")
         self._log("📋 Select a file and click 'Start Test' to begin")
         self._log("-" * 80)
+    
+    def _setup_camera_tab(self):
+        """Setup live camera tab"""
         
+        main_frame = ttk.Frame(self.camera_tab, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Left panel - Controls
+        left_panel = ttk.Frame(main_frame)
+        left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        
+        # Camera controls
+        control_frame = ttk.LabelFrame(left_panel, text="🎮 Camera Controls", padding="10")
+        control_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        self.camera_start_btn = ttk.Button(
+            control_frame,
+            text="▶️ Start Camera",
+            command=self._start_camera,
+            width=20
+        )
+        self.camera_start_btn.pack(pady=5)
+        
+        self.camera_stop_btn = ttk.Button(
+            control_frame,
+            text="⏹️ Stop Camera",
+            command=self._stop_camera,
+            state=tk.DISABLED,
+            width=20
+        )
+        self.camera_stop_btn.pack(pady=5)
+        
+        # Display options
+        display_frame = ttk.LabelFrame(left_panel, text="👁️ Display Options", padding="10")
+        display_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Checkbutton(
+            display_frame,
+            text="Show Detections",
+            variable=self.show_live_detections,
+            command=self._toggle_live_detections
+        ).pack(anchor=tk.W, pady=3)
+        
+        ttk.Checkbutton(
+            display_frame,
+            text="Show Pose Estimation",
+            variable=self.show_live_pose,
+            command=self._toggle_live_pose
+        ).pack(anchor=tk.W, pady=3)
+        
+        ttk.Checkbutton(
+            display_frame,
+            text="Show Statistics",
+            variable=self.show_live_stats,
+            command=self._toggle_live_stats
+        ).pack(anchor=tk.W, pady=3)
+        
+        self.show_live_objects = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            display_frame,
+            text="Show Objects",
+            variable=self.show_live_objects,
+            command=self._toggle_live_objects
+        ).pack(anchor=tk.W, pady=3)
+        
+        # Stats display
+        stats_frame = ttk.LabelFrame(left_panel, text="📊 Live Statistics", padding="10")
+        stats_frame.pack(fill=tk.BOTH, expand=True)
+        
+        self.live_stats_text = tk.Text(
+            stats_frame,
+            height=20,
+            width=30,
+            font=("Courier", 9),
+            state=tk.DISABLED
+        )
+        self.live_stats_text.pack(fill=tk.BOTH, expand=True)
+        
+        # Right panel - Camera feed
+        right_panel = ttk.Frame(main_frame)
+        right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        feed_frame = ttk.LabelFrame(right_panel, text="📹 Live Camera Feed", padding="10")
+        feed_frame.pack(fill=tk.BOTH, expand=True)
+        
+        self.camera_label = tk.Label(feed_frame, bg="black", text="Camera Feed")
+        self.camera_label.pack(fill=tk.BOTH, expand=True)
+    
+    # ===== File Testing Methods =====
+    
     def _on_mode_change(self):
         """Handle test mode change"""
         mode = self.test_mode.get()
@@ -550,6 +666,145 @@ class TestGUI:
         
         self._log(f"📂 Opened results folder: {folder}")
     
+    # ===== Live Camera Methods =====
+    
+    def _start_camera(self):
+        """Start live camera"""
+        try:
+            self.live_camera = LiveCameraSystem(
+                camera_index=0,
+                enable_pose=True,
+                enable_clothing=True,
+                enable_tracking=True
+            )
+            
+            if not self.live_camera.start():
+                messagebox.showerror("Error", "Could not start camera!")
+                return
+            
+            self.camera_running = True
+            self.camera_start_btn.config(state=tk.DISABLED)
+            self.camera_stop_btn.config(state=tk.NORMAL)
+            
+            # Start camera loop
+            self._camera_loop()
+            
+            print("✅ Camera started successfully")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Camera error: {str(e)}")
+            print(f"❌ Camera error: {e}")
+    
+    def _stop_camera(self):
+        """Stop live camera"""
+        self.camera_running = False
+        if self.live_camera:
+            self.live_camera.stop()
+        
+        self.camera_start_btn.config(state=tk.NORMAL)
+        self.camera_stop_btn.config(state=tk.DISABLED)
+        
+        # Clear camera display
+        self.camera_label.config(image='', text="Camera Feed Stopped")
+        
+        print("⏹️ Camera stopped")
+    
+    def _camera_loop(self):
+        """Main camera processing loop"""
+        if not self.camera_running or not self.live_camera:
+            return
+        
+        # Read and process frame
+        ret, frame = self.live_camera.read_frame()
+        
+        if ret:
+            # Process frame
+            processed = self.live_camera.process_frame(frame)
+            
+            # Convert to PhotoImage
+            frame_rgb = cv2.cvtColor(processed, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(frame_rgb)
+            
+            # Resize to fit display (maintain aspect ratio)
+            display_width = 800
+            aspect_ratio = img.height / img.width
+            display_height = int(display_width * aspect_ratio)
+            img = img.resize((display_width, display_height), Image.Resampling.LANCZOS)
+            
+            photo = ImageTk.PhotoImage(image=img)
+            
+            # Update display
+            self.camera_label.config(image=photo, text='')
+            self.camera_label.image = photo
+            
+            # Update stats
+            self._update_live_stats()
+        
+        # Schedule next frame
+        self.root.after(30, self._camera_loop)  # ~30 FPS
+    
+    def _update_live_stats(self):
+        """Update live statistics display"""
+        if not self.live_camera:
+            return
+        
+        stats = self.live_camera.get_statistics()
+        
+        self.live_stats_text.config(state=tk.NORMAL)
+        self.live_stats_text.delete('1.0', tk.END)
+        
+        # Format stats
+        text = f"""
+LIVE CAMERA STATS
+{'='*28}
+
+FPS: {stats['fps']:.1f}
+Frame Count: {stats['frame_count']}
+Running Time: {stats['running_time']:.1f}s
+
+{'='*28}
+PEOPLE DETECTED: {stats['people_detected']}
+{'='*28}
+
+"""
+        
+        # Add individual person stats
+        for person in stats['live_persons']:
+            text += f"\nPerson ID: {person['id']}\n"
+            text += f"  Duration: {person['duration']:.1f}s\n"
+            text += f"  Activity: {person['activity']}\n"
+            text += f"  Moving: {'Yes' if person['is_moving'] else 'No'}\n"
+            
+            if person['clothing']:
+                clothing = person['clothing']
+                text += f"  Clothing: {clothing.get('color', 'unknown')}\n"
+                text += f"  Pattern: {clothing.get('pattern', 'unknown')}\n"
+            
+            text += "\n"
+        
+        self.live_stats_text.insert('1.0', text)
+        self.live_stats_text.config(state=tk.DISABLED)
+    
+    def _toggle_live_detections(self):
+        """Toggle live detection display"""
+        if self.live_camera:
+            state = self.live_camera.toggle_detections()
+            print(f"✅ Detections: {'ON' if state else 'OFF'}")
+    
+    def _toggle_live_pose(self):
+        """Toggle pose estimation display"""
+        if self.live_camera:
+            state = self.live_camera.toggle_pose()
+            print(f"✅ Pose: {'ON' if state else 'OFF'}")
+    
+    def _toggle_live_stats(self):
+        """Toggle stats display"""
+        if self.live_camera:
+            state = self.live_camera.toggle_stats()
+            print(f"✅ Stats overlay: {'ON' if state else 'OFF'}")
+    
+    # ===== Utility Methods =====
+    
     def _update_status(self, message, color="black"):
         """Update status label"""
         self.status_label.config(text=message, foreground=color)
@@ -568,12 +823,21 @@ class TestGUI:
         self.start_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
         self.is_testing = False
+    
+    def on_closing(self):
+        """Handle window close"""
+        if self.camera_running:
+            self._stop_camera()
+        self.root.destroy()
 
 
 def main():
     """Main entry point"""
     root = tk.Tk()
     app = TestGUI(root)
+    
+    # Handle window close
+    root.protocol("WM_DELETE_WINDOW", app.on_closing)
     
     # Set window icon (if available)
     try:
@@ -594,5 +858,5 @@ def main():
 
 
 if __name__ == "__main__":
-    print("🚀 Launching Eyeora Test GUI...")
+    print("🚀 Launching Eyeora Test GUI with Live Camera...")
     main()
