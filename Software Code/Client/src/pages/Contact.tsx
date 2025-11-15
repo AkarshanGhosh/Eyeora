@@ -1,7 +1,7 @@
 /**
  * Contact Us Page Component
  * 
- * Contact form and information for reaching out to Eyero
+ * Contact form and information for reaching out to Eyeora
  */
 
 import { useState } from 'react';
@@ -73,7 +73,7 @@ const Contact = () => {
             Get In Touch
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Have questions about Eyero? We'd love to hear from you. Send us a message and we'll respond as soon as
+            Have questions about Eyeora? We'd love to hear from you. Send us a message and we'll respond as soon as
             possible.
           </p>
         </div>

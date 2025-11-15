@@ -1,7 +1,7 @@
 /**
  * Navbar Component
  * 
- * Main navigation bar for the Eyero platform
+ * Main navigation bar for the Eyeora platform
  * Contains links to: Home, About Us, Products, Login/Signup, User Dashboard, Admin Dashboard, Contact Us
  */
 
@@ -34,7 +34,7 @@ const Navbar = () => {
               <Video className="w-6 h-6 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Eyero
+              Eyeora
             </span>
           </Link>
 

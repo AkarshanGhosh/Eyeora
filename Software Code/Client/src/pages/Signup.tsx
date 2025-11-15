@@ -85,7 +85,7 @@ const Signup = () => {
             <Video className="w-7 h-7 text-primary-foreground" />
           </div>
           <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Eyero
+            Eyeora
           </span>
         </Link>
 
@@ -93,7 +93,7 @@ const Signup = () => {
         <div className="bg-card rounded-2xl p-8 border border-border shadow-elegant animate-fade-in">
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold mb-2">Create Your Account</h1>
-            <p className="text-muted-foreground">Start your journey with Eyero today</p>
+            <p className="text-muted-foreground">Start your journey with Eyeora today</p>
           </div>
 
           <form onSubmit={handleSignup} className="space-y-4">

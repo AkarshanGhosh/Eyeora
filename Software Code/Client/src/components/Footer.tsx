@@ -2,7 +2,7 @@
  * Footer Component
  * 
  * Modern, stylish footer with social links and copyright information
- * Links to LinkedIn, GitHub, and Email for Akarshan Ghosh & Eyero
+ * Links to LinkedIn, GitHub, and Email for Akarshan Ghosh & Eyeora
  */
 
 import { Mail, Linkedin, Github } from 'lucide-react';
@@ -70,7 +70,7 @@ const Footer = () => {
                 <span className="text-xl font-bold text-primary-foreground">E</span>
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Eyero
+                Eyeora
               </span>
             </div>
             <p className="text-muted-foreground text-sm mb-4 max-w-sm">
@@ -119,7 +119,7 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             {/* Copyright */}
             <p className="text-sm text-muted-foreground text-center md:text-left">
-              © {new Date().getFullYear()} Eyero. Created by{' '}
+              © {new Date().getFullYear()} Eyeora. Created by{' '}
               <a
                 href="https://linkedin.com/in/akarshan-ghosh/"
                 target="_blank"

@@ -1,7 +1,7 @@
 /**
  * API Configuration File
  * 
- * This file contains all API endpoints for the Eyero CCTV platform.
+ * This file contains all API endpoints for the Eyeora CCTV platform.
  * Base URL can be easily updated here for different environments.
  */
 

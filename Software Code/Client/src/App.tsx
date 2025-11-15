@@ -1,7 +1,7 @@
 /**
  * Main App Component
  * 
- * Configures routing for all pages in the Eyero platform
+ * Configures routing for all pages in the Eyeora platform
  */
 
 import { Toaster } from "@/components/ui/toaster";

@@ -1,7 +1,7 @@
 /**
  * Home Page Component
  * 
- * Landing page for Eyero platform
+ * Landing page for Eyeora platform
  * Features hero section, key features, and call-to-action
  */
 
@@ -109,7 +109,7 @@ const Home = () => {
             Ready to Transform Your Security?
           </h2>
           <p className="text-primary-foreground/90 text-lg mb-8 max-w-2xl mx-auto">
-            Join hundreds of businesses using Eyero to enhance their security and gain valuable insights.
+            Join hundreds of businesses using Eyeora to enhance their security and gain valuable insights.
           </p>
           <Link to="/signup">
             <Button

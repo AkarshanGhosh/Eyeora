@@ -40,7 +40,7 @@ const Login = () => {
       if (response.ok) {
         toast({
           title: 'Login Successful',
-          description: 'Welcome back to Eyero!',
+          description: 'Welcome back to Eyeora!',
         });
         // Handle successful login (store token, redirect, etc.)
         console.log('Login success:', data);
@@ -72,7 +72,7 @@ const Login = () => {
             <Video className="w-7 h-7 text-primary-foreground" />
           </div>
           <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Eyero
+            Eyeora
           </span>
         </Link>
 

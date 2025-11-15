@@ -1,7 +1,7 @@
 /**
  * Products Page Component
  * 
- * Displays Eyero product offerings, features, and pricing
+ * Displays Eyeora product offerings, features, and pricing
  */
 
 import { Check } from 'lucide-react';

@@ -1,7 +1,7 @@
 /**
  * About Us Page Component
  * 
- * Detailed information about the Eyero project, vision, and technology
+ * Detailed information about the Eyeora project, vision, and technology
  */
 
 import { Target, Users, Zap, Globe } from 'lucide-react';
@@ -76,7 +76,7 @@ const About = () => {
       <section className="container mx-auto px-4 pt-20 pb-16">
         <div className="max-w-4xl mx-auto text-center animate-fade-in">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            About Eyero
+            About Eyeora
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Transforming traditional CCTV into intelligent monitoring systems with the power of artificial intelligence
@@ -90,7 +90,7 @@ const About = () => {
           <div className="bg-card rounded-2xl p-8 md:p-12 border border-border shadow-elegant">
             <h2 className="text-3xl font-bold mb-6">Our Vision</h2>
             <p className="text-muted-foreground text-lg leading-relaxed mb-6">
-              Eyero is an AI-powered CCTV platform designed to bring intelligence to surveillance systems. We've built
+              Eyeora is an AI-powered CCTV platform designed to bring intelligence to surveillance systems. We've built
               a solution capable of real-time object detection, activity recognition, and comprehensive analytics for
               retail shops, hospitals, and security-sensitive areas.
             </p>
@@ -133,7 +133,7 @@ const About = () => {
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Real-World Applications</h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            See how Eyero is transforming industries with intelligent monitoring
+            See how Eyeora is transforming industries with intelligent monitoring
           </p>
         </div>
 

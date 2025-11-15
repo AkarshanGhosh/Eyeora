@@ -129,7 +129,7 @@ const AdminDashboard = () => {
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Admin Dashboard
           </h1>
-          <p className="text-muted-foreground text-lg">Monitor and manage the Eyero platform</p>
+          <p className="text-muted-foreground text-lg">Monitor and manage the Eyeora platform</p>
         </div>
       </section>
 
