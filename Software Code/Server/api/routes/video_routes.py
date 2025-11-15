@@ -1,7 +1,7 @@
 """
-Video Processing API Routes
+Video Processing API Routes - FIXED VERSION
 Handles video upload, processing, and analytics
-Location: Software Code/Server/routes/video_routes.py
+Location: Software Code/Server/api/routes/video_routes.py
 """
 
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, Query, HTTPException
@@ -11,6 +11,7 @@ from pathlib import Path
 from datetime import datetime
 import uuid
 import asyncio
+import traceback
 
 from core.video_processor import VideoProcessor
 from core.detection_engine import DetectionEngine
@@ -36,11 +37,6 @@ async def upload_video(
 ):
     """
     Upload video for processing
-    
-    - **file**: Video file (MP4, AVI, MOV, etc.)
-    - **generate_output**: Create annotated output video
-    - **export_csv**: Export analytics data
-    - **confidence**: Detection threshold (0-1)
     """
     try:
         # Generate unique job ID
@@ -54,10 +50,14 @@ async def upload_video(
         upload_path = UPLOADS_DIR / "videos" / filename
         upload_path.parent.mkdir(parents=True, exist_ok=True)
         
+        print(f"📥 Uploading video: {filename}")
+        
         # Save uploaded file
         with open(upload_path, "wb") as f:
             content = await file.read()
             f.write(content)
+        
+        print(f"✅ Upload complete: {upload_path}")
         
         # Validate video
         is_valid, message = validate_video_file(str(upload_path))
@@ -83,6 +83,8 @@ async def upload_video(
             "progress": 0
         }
         
+        print(f"✅ Job created: {job_id}")
+        
         return {
             "status": "success",
             "job_id": job_id,
@@ -94,6 +96,8 @@ async def upload_video(
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Upload error: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -106,21 +110,33 @@ async def process_video_background(job_id: str):
         job["status"] = "processing"
         job["started_at"] = datetime.now().isoformat()
         
+        print(f"🎬 Starting processing for job: {job_id}")
+        print(f"   File: {job['filename']}")
+        
         # Initialize processor
         processor = VideoProcessor()
         
-        # Process video
+        # Determine output path
         output_path = None
         if job["config"]["generate_output"]:
             output_filename = f"processed_{job_id[:8]}.mp4"
             output_path = str(PROCESSED_DIR / "videos" / output_filename)
+            # Ensure directory exists
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         
+        print(f"   Output path: {output_path}")
+        
+        # Process video
         result = processor.process_video(
             video_path=job["upload_path"],
             output_path=output_path,
             generate_output_video=job["config"]["generate_output"],
             export_csv=job["config"]["export_csv"]
         )
+        
+        print(f"✅ Processing complete for job: {job_id}")
+        print(f"   Total tracks: {result['total_tracks']}")
+        print(f"   Processing time: {result['processing_time']:.2f}s")
         
         # Update job with results
         job["status"] = "completed"
@@ -133,18 +149,23 @@ async def process_video_background(job_id: str):
             "csv_path": result.get("csv_path")
         }
         
+        print(f"📊 Job {job_id} completed successfully")
+        
     except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Processing failed for job {job_id}")
+        print(f"   Error: {error_msg}")
+        traceback.print_exc()
+        
         processing_jobs[job_id]["status"] = "failed"
-        processing_jobs[job_id]["error"] = str(e)
-        print(f"Processing failed for job {job_id}: {e}")
+        processing_jobs[job_id]["error"] = error_msg
+        processing_jobs[job_id]["completed_at"] = datetime.now().isoformat()
 
 
 @router.post("/process/{job_id}")
 async def process_video(job_id: str, background_tasks: BackgroundTasks):
     """
     Start processing uploaded video
-    
-    - **job_id**: Job ID from upload
     """
     try:
         if job_id not in processing_jobs:
@@ -157,6 +178,8 @@ async def process_video(job_id: str, background_tasks: BackgroundTasks):
                 status_code=400,
                 detail=f"Job is already {job['status']}"
             )
+        
+        print(f"🚀 Adding processing task for job: {job_id}")
         
         # Add background processing task
         background_tasks.add_task(process_video_background, job_id)
@@ -171,6 +194,7 @@ async def process_video(job_id: str, background_tasks: BackgroundTasks):
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Error starting processing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -180,8 +204,6 @@ async def process_video(job_id: str, background_tasks: BackgroundTasks):
 async def get_job_status(job_id: str):
     """
     Get processing job status
-    
-    Returns current status and results if completed
     """
     try:
         if job_id not in processing_jobs:
@@ -206,13 +228,15 @@ async def get_job_status(job_id: str):
             response["result"] = job.get("result")
         
         if job["status"] == "failed":
-            response["error"] = job.get("error")
+            response["error"] = job.get("error", "Unknown error")
+            response["completed_at"] = job.get("completed_at")
         
         return response
         
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Error getting status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -260,6 +284,7 @@ async def get_results(job_id: str):
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Error getting results: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -290,6 +315,7 @@ async def download_video(job_id: str):
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Error downloading video: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -318,6 +344,7 @@ async def download_csv(job_id: str):
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Error downloading CSV: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -330,9 +357,6 @@ async def list_jobs(
 ):
     """
     List all processing jobs
-    
-    - **status**: Filter by status (uploaded, processing, completed, failed)
-    - **limit**: Maximum jobs to return
     """
     try:
         jobs = []
@@ -359,6 +383,7 @@ async def list_jobs(
         }
         
     except Exception as e:
+        print(f"❌ Error listing jobs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -405,6 +430,7 @@ async def delete_job(job_id: str):
     except HTTPException:
         raise
     except Exception as e:
+        print(f"❌ Error deleting job: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

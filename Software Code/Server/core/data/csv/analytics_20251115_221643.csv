@@ -1,0 +1,25 @@
+timestamp,person_id,entry_time,exit_time,duration_seconds,behavior,visited_zones,made_purchase,confidence,movement_distance,details
+2025-11-15 22:16:43,65493dff,05:30:00,05:30:00,51.94,idle,entry,No,0.85,473.89,Person stationary for 51.9s
+2025-11-15 22:16:43,d9707f81,05:30:00,05:30:00,13.75,browsing,exit,No,0.85,420.44,"Active browsing for 13.7s, moved 420px"
+2025-11-15 22:16:43,ce8d1b98,05:30:00,05:30:00,16.04,browsing,main_area,No,0.75,37.76,Browsing with limited movement for 16.0s
+2025-11-15 22:16:43,755c5a2d,05:30:00,05:30:00,67.21,browsing,exit,No,0.75,426.29,Browsing with limited movement for 67.2s
+2025-11-15 22:16:43,1d4a6ec1,05:30:00,05:30:00,2.29,passing_through,,No,0.5,5.47,Insufficient tracking data
+2025-11-15 22:16:43,860bd0a6,05:30:00,05:30:00,2.29,passing_through,,No,0.5,1.4,Insufficient tracking data
+2025-11-15 22:16:43,9e89881f,05:30:01,05:30:00,12.98,idle,entry,No,0.85,66.76,Person stationary for 13.0s
+2025-11-15 22:16:43,29a08313,05:30:03,05:30:00,7.64,browsing,entry,No,0.75,71.36,Browsing with limited movement for 7.6s
+2025-11-15 22:16:43,330c9b97,05:30:04,05:30:00,19.09,purchasing,"checkout, main_area, exit",Yes,0.9,449.57,Customer visited checkout area
+2025-11-15 22:16:43,5e6d1f20,05:30:07,05:30:00,1.53,passing_through,,No,0.5,26.37,Insufficient tracking data
+2025-11-15 22:16:43,37347444,05:30:08,05:30:00,53.46,browsing,main_area,No,0.75,232.55,Browsing with limited movement for 53.5s
+2025-11-15 22:16:43,353731bc,05:30:09,05:30:00,25.2,idle,"main_area, entry",No,0.85,219.99,Person stationary for 25.2s
+2025-11-15 22:16:43,f9674b53,05:30:09,05:30:00,15.28,browsing,"main_area, exit",No,0.75,134.51,Browsing with limited movement for 15.3s
+2025-11-15 22:16:43,05cba664,05:30:09,05:30:00,9.17,browsing,exit,No,0.85,164.32,"Active browsing for 9.2s, moved 164px"
+2025-11-15 22:16:43,f6eea2f5,05:30:10,05:30:00,42.77,idle,entry,No,0.85,235.77,Person stationary for 42.8s
+2025-11-15 22:16:43,fa3a3a2e,05:30:12,05:30:00,54.99,browsing,"main_area, exit",No,0.75,165.2,Browsing with limited movement for 55.0s
+2025-11-15 22:16:43,abc9f3f7,05:30:12,05:30:00,22.15,idle,main_area,No,0.85,79.87,Person stationary for 22.1s
+2025-11-15 22:16:43,e7b7a819,05:30:12,05:30:00,24.44,passing_through,,No,0.5,31.29,Insufficient tracking data
+2025-11-15 22:16:43,cbdaa2f4,05:30:13,05:30:00,13.75,idle,main_area,No,0.85,101.97,Person stationary for 13.7s
+2025-11-15 22:16:43,ba3f396b,05:30:17,05:30:00,2.29,passing_through,,No,0.5,87.76,Insufficient tracking data
+2025-11-15 22:16:43,e79fa502,05:30:22,05:30:00,49.65,idle,entry,No,0.85,245.96,Person stationary for 49.6s
+2025-11-15 22:16:43,d5553678,05:30:22,05:30:00,6.11,browsing,entry,No,0.85,299.67,"Active browsing for 6.1s, moved 300px"
+2025-11-15 22:16:43,a88f9daf,05:30:44,05:30:00,10.69,idle,entry,No,0.85,69.16,Person stationary for 10.7s
+2025-11-15 22:16:43,be76f6a7,05:30:44,05:30:00,16.04,purchasing,"checkout, main_area",Yes,0.9,325.9,Customer visited checkout area

@@ -144,7 +144,20 @@ const UserDashboard = () => {
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`${API_BASE}/video/status/${jobId}`);
+        
+        if (!response.ok) {
+          console.error('Failed to fetch job status:', response.status);
+          clearInterval(pollInterval);
+          return;
+        }
+        
         const data = await response.json();
+        console.log('📊 Job status:', jobId, data);
+        
+        // Log error if present
+        if (data.error) {
+          console.error('❌ Processing error:', data.error);
+        }
 
         setProcessingJobs(prev => ({ ...prev, [jobId]: data.status }));
 
@@ -152,18 +165,32 @@ const UserDashboard = () => {
           clearInterval(pollInterval);
           showNotification('Video processing completed!', 'success');
           
+          // Fetch full results
+          const resultsResponse = await fetch(`${API_BASE}/video/results/${jobId}`);
+          const resultsData = await resultsResponse.json();
+          console.log('✅ Job results:', resultsData);
+          
           setUploadedVideos(prev => prev.map(v => 
-            v.jobId === jobId ? { ...v, status: 'completed', result: data.result } : v
+            v.jobId === jobId ? { 
+              ...v, 
+              status: 'completed', 
+              result: data.result,
+              analytics: resultsData.analytics,
+              files: resultsData.files
+            } : v
           ));
         } else if (data.status === 'failed') {
           clearInterval(pollInterval);
-          showNotification('Video processing failed', 'error');
+          const errorMsg = data.error || 'Unknown error';
+          showNotification('Video processing failed: ' + errorMsg, 'error');
+          console.error('💥 Processing failed for job:', jobId, 'Error:', errorMsg);
           
           setUploadedVideos(prev => prev.map(v => 
-            v.jobId === jobId ? { ...v, status: 'failed' } : v
+            v.jobId === jobId ? { ...v, status: 'failed', error: errorMsg } : v
           ));
         }
       } catch (error) {
+        console.error('Error polling job status:', error);
         clearInterval(pollInterval);
       }
     }, 3000);
@@ -299,8 +326,13 @@ const UserDashboard = () => {
         const data = JSON.parse(event.data);
         
         if (data.type === 'statistics') {
-          // Debug: Log the received statistics
-          console.log('📊 Received stats for', streamId, ':', data.data);
+          // Debug: Log the received statistics with full details
+          console.log('📊 Received stats for', streamId);
+          console.log('   FPS:', data.data.fps);
+          console.log('   People:', data.data.people_detected);
+          console.log('   Objects:', data.data.objects_detected);
+          console.log('   Live Persons:', data.data.live_persons?.length);
+          console.log('   Full data:', data.data);
           
           setStreamStats(prev => ({
             ...prev,
@@ -468,23 +500,87 @@ const UserDashboard = () => {
                   Recent Uploads
                   <span className="text-xs text-gray-500">({uploadedVideos.length})</span>
                 </h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="space-y-3 max-h-96 overflow-y-auto">
                   {uploadedVideos.map((video, idx) => (
-                    <div key={idx} className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex justify-between items-center">
-                      <div>
-                        <p className="font-medium text-gray-900">{video.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(video.timestamp).toLocaleString()}
-                        </p>
+                    <div key={idx} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{video.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(video.timestamp).toLocaleString()}
+                          </p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
+                          video.status === 'processing' ? 'bg-yellow-100 text-yellow-800' : 
+                          video.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          video.status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {video.status === 'processing' && <Loader className="w-3 h-3 animate-spin" />}
+                          {video.status === 'completed' && <CheckCircle className="w-3 h-3" />}
+                          {video.status === 'failed' && <XCircle className="w-3 h-3" />}
+                          {video.status}
+                        </span>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
-                        video.status === 'processing' ? 'bg-yellow-100 text-yellow-800' : 
-                        video.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        video.status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {video.status === 'processing' && <Loader className="w-3 h-3 animate-spin" />}
-                        {video.status}
-                      </span>
+
+                      {/* Analytics Results */}
+                      {video.status === 'completed' && video.analytics && (
+                        <div className="mt-3 p-3 bg-white rounded border border-gray-200">
+                          <h4 className="text-xs font-semibold text-gray-700 mb-2">Analytics Results:</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                            <div>
+                              <span className="text-gray-500">Total Visitors:</span>
+                              <span className="ml-1 font-semibold text-gray-900">{video.analytics.total_visitors}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Purchasers:</span>
+                              <span className="ml-1 font-semibold text-green-600">{video.analytics.purchasers}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Conversion:</span>
+                              <span className="ml-1 font-semibold text-blue-600">{video.analytics.conversion_rate}%</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Avg Duration:</span>
+                              <span className="ml-1 font-semibold text-purple-600">{video.analytics.avg_visit_duration}s</span>
+                            </div>
+                          </div>
+                          
+                          {/* Download Links */}
+                          {video.files && (
+                            <div className="mt-3 flex gap-2">
+                              {video.files.output_video && (
+                                <a 
+                                  href={`${API_BASE}${video.files.output_video}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs px-3 py-1 bg-cyan-500 text-white rounded hover:bg-cyan-600 flex items-center gap-1"
+                                >
+                                  <Video className="w-3 h-3" />
+                                  Download Video
+                                </a>
+                              )}
+                              {video.files.csv && (
+                                <a 
+                                  href={`${API_BASE}${video.files.csv}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-1"
+                                >
+                                  <Upload className="w-3 h-3" />
+                                  Download CSV
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Error Message */}
+                      {video.status === 'failed' && video.error && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                          <p className="text-xs text-red-700">Error: {video.error}</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -623,11 +719,15 @@ const UserDashboard = () => {
                               src={`${API_BASE}/live/stream?camera_index=${stream.cameraUID}&t=${Date.now()}`}
                               alt={stream.cameraName}
                               className="w-full h-full object-contain"
-                              onError={() => {
-                                setStreamErrors(prev => ({
-                                  ...prev,
-                                  [stream.id]: 'Failed to load stream'
-                                }));
+                              onError={(e) => {
+                                // Don't show error if stream was intentionally stopped
+                                if (activeStreams.some(s => s.id === stream.id)) {
+                                  console.error('Stream load error for', stream.id);
+                                  setStreamErrors(prev => ({
+                                    ...prev,
+                                    [stream.id]: 'Failed to load stream'
+                                  }));
+                                }
                               }}
                             />
                             
