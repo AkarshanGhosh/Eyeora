@@ -7,8 +7,8 @@ Location: Software Code/Server/server.py
 import sys
 from pathlib import Path as _Path
 _THIS = _Path(__file__).resolve()
-_ROOT = _THIS.parent                # ...\server
-_PARENT = _ROOT.parent              # ...\ (project parent, possibly contains 'Server')
+_ROOT = _THIS.parent                # ...\Server
+_PARENT = _ROOT.parent              # ...\Software Code
 for p in (_ROOT, _PARENT):
     sp = str(p)
     if sp not in sys.path:
@@ -27,17 +27,28 @@ from datetime import datetime
 from pathlib import Path
 from PIL import Image
 from typing import Optional
-from api.routes import auth_routes
 
 from fastapi import FastAPI, Form, UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+# Existing auth routes
+from api.routes import auth_routes
+
+# NEW: live/video API routers (stored in api/routes/)
+from api.routes.live_camera_routes import router as live_camera_router
+from api.routes.video_routes import router as video_router
+
 # Import core modules
 from core.config import (
-    MODEL_PATH, UPLOADS_DIR, PROCESSED_DIR, STATIC_DIR,
-    CONFIDENCE_THRESHOLD, MODELS_DIR
+    MODEL_PATH,
+    UPLOADS_DIR,
+    PROCESSED_DIR,
+    STATIC_DIR,
+    CONFIDENCE_THRESHOLD,
+    MODELS_DIR,
+    DATA_DIR,          # <-- added here so we can mount /data
 )
 from core.detection_engine import DetectionEngine, ModelManager
 from core.video_processor import VideoProcessor
@@ -67,8 +78,11 @@ app = FastAPI(
     description="Advanced AI-powered CCTV analytics system",
     version="1.0.0"
 )
-# Include auth routes
+
+# Include auth + new routers
 app.include_router(auth_routes.router)
+app.include_router(live_camera_router)
+app.include_router(video_router)
 
 # Add CORS middleware
 app.add_middleware(
@@ -124,8 +138,19 @@ def get_video_processor():
 # ----------------------------
 # Mount static files
 # ----------------------------
+# Original static mount (kept)
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# NEW: static mounts for uploads/processed/data (non-breaking)
+if UPLOADS_DIR.exists():
+    app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
+if PROCESSED_DIR.exists():
+    app.mount("/processed", StaticFiles(directory=str(PROCESSED_DIR)), name="processed")
+
+if DATA_DIR.exists():
+    app.mount("/data", StaticFiles(directory=str(DATA_DIR)), name="data")
 
 # ----------------------------
 # Utility Functions (Original)
@@ -622,7 +647,6 @@ async def get_processed_video(filename: str):
 @app.get("/data/csv/{filename}")
 async def get_csv_file(filename: str):
     """Serve CSV export file"""
-    from core.config import DATA_DIR
     file_path = DATA_DIR / "csv" / filename
     if file_path.exists():
         return FileResponse(file_path, media_type="text/csv")
@@ -846,4 +870,3 @@ if __name__ == "__main__":
     
     # Bind to all interfaces so other devices can reach it
     uvicorn.run("server2:app", host="0.0.0.0", port=port, reload=True)
-
