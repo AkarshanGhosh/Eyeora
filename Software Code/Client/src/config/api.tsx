@@ -5,8 +5,8 @@
  * Base URL can be easily updated here for different environments.
  */
 
-// Base API URL - Update this for production deployment
-export const API_BASE_URL = 'http://127.0.0.1:8000';
+// Base API URL - Use localhost instead of 127.0.0.1 for better CORS compatibility
+export const API_BASE_URL = 'http://localhost:8000';
 
 /**
  * Authentication APIs
@@ -116,10 +116,10 @@ export const STREAMING_ENDPOINTS = {
   MJPEG_STREAM: `${API_BASE_URL}/live/stream`,
   
   // WebSocket for live statistics
-  WS_STATISTICS: `ws://127.0.0.1:8000/live/ws/statistics`,
+  WS_STATISTICS: `ws://localhost:8000/live/ws/statistics`,
   
   // WebSocket for live frames (base64)
-  WS_FRAMES: `ws://127.0.0.1:8000/live/ws/frames`,
+  WS_FRAMES: `ws://localhost:8000/live/ws/frames`,
 };
 
 /**

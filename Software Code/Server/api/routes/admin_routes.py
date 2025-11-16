@@ -81,7 +81,25 @@ async def list_all_users(
     """List all users with details (Admin only)"""
     user_repo = UserRepository(db)
     users = await user_repo.get_all_users(skip=skip, limit=limit)
-    return [UserDetailPublic(**user) for user in users]
+    
+    # Convert users to response model with error handling
+    result = []
+    for user in users:
+        try:
+            result.append(UserDetailPublic(
+                id=user.get("_id", ""),
+                email=user.get("email", ""),
+                full_name=user.get("full_name"),
+                role=user.get("role", "user"),
+                is_active=user.get("is_active", True),
+                created_at=user.get("created_at", datetime.utcnow()),
+                last_login=user.get("last_login")
+            ))
+        except Exception as e:
+            print(f"⚠️  Error converting user {user.get('_id')}: {e}")
+            continue
+    
+    return result
 
 @router.get("/users/{user_id}", response_model=UserDetailPublic)
 async def get_user_details(
@@ -91,10 +109,19 @@ async def get_user_details(
 ) -> Any:
     """Get specific user details (Admin only)"""
     user_repo = UserRepository(db)
-    user = await user_repo.get_by_id(user_id)
+    user = await user_repo.get_by_id(user_id, include_password=False)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return UserDetailPublic(**user)
+    
+    return UserDetailPublic(
+        id=user.get("_id", user_id),
+        email=user.get("email", ""),
+        full_name=user.get("full_name"),
+        role=user.get("role", "user"),
+        is_active=user.get("is_active", True),
+        created_at=user.get("created_at", datetime.utcnow()),
+        last_login=user.get("last_login")
+    )
 
 @router.put("/users/{user_id}", response_model=UserDetailPublic)
 async def update_user(
@@ -107,25 +134,35 @@ async def update_user(
     user_repo = UserRepository(db)
     
     # Check if user exists
-    existing = await user_repo.get_by_id(user_id)
+    existing = await user_repo.get_by_id(user_id, include_password=False)
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
     
     # Prepare update data
     update_data = user_update.model_dump(exclude_unset=True)
     
-    # Hash password if provided
+    # Handle password separately if provided
     if "password" in update_data and update_data["password"]:
-        update_data["password"] = get_password_hash(update_data["password"])
+        hashed_password = get_password_hash(update_data.pop("password"))
+        await user_repo.update_password(user_id, hashed_password)
     
-    # Update user
-    success = await user_repo.update_user(user_id, update_data)
-    if not success:
-        raise HTTPException(status_code=500, detail="Update failed")
+    # Update other fields
+    if update_data:
+        success = await user_repo.update_user(user_id, update_data)
+        if not success and not user_update.password:
+            raise HTTPException(status_code=500, detail="Update failed")
     
     # Return updated user
-    updated = await user_repo.get_by_id(user_id)
-    return UserDetailPublic(**updated)
+    updated = await user_repo.get_by_id(user_id, include_password=False)
+    return UserDetailPublic(
+        id=updated["_id"],
+        email=updated["email"],
+        full_name=updated.get("full_name"),
+        role=updated.get("role", "user"),
+        is_active=updated.get("is_active", True),
+        created_at=updated.get("created_at", datetime.utcnow()),
+        last_login=updated.get("last_login")
+    )
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
@@ -141,7 +178,7 @@ async def delete_user(
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
     
     # Check if user exists
-    existing = await user_repo.get_by_id(user_id)
+    existing = await user_repo.get_by_id(user_id, include_password=False)
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
     
