@@ -4,16 +4,16 @@
  * Complete admin panel with:
  * - Real-time analytics and statistics
  * - User management (list, add, update, delete)
- * - Camera management
+ * - Camera management (list, add, update, delete)
  * - Media file management (videos/images)
  * - System status monitoring
  */
 
 import { useState, useEffect } from 'react';
 import { 
-  Users, Video, Activity, Shield, UserPlus, UserMinus, Camera, 
-  Trash2, Edit2, PlayCircle, Image as ImageIcon, Download, AlertCircle,
-  Database, Cpu, HardDrive, RefreshCw
+  Users, Video, Activity, Shield, UserPlus, Camera, 
+  Trash2, Edit2, PlayCircle, Image as ImageIcon, Download,
+  Database, Cpu, HardDrive, RefreshCw, MapPin, Power, PowerOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -98,6 +98,19 @@ interface User {
   last_login?: string;
 }
 
+interface CameraDevice {
+  id: string;
+  name: string;
+  uid: string;
+  image_url?: string;
+  location?: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+}
+
 const AdminDashboard = () => {
   const { token, isAdmin, user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -111,7 +124,7 @@ const AdminDashboard = () => {
         description: 'Admin privileges required',
         variant: 'destructive',
       });
-      navigate('/user-dashboard');
+      navigate('/');
     }
   }, [isAdmin, navigate]);
 
@@ -119,6 +132,7 @@ const AdminDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const [dbStatus, setDbStatus] = useState<string>('checking...');
   
   // User management state
@@ -127,6 +141,15 @@ const AdminDashboard = () => {
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserFullName, setNewUserFullName] = useState('');
   const [newUserRole, setNewUserRole] = useState('user');
+
+  // Camera management state
+  const [editingCamera, setEditingCamera] = useState<CameraDevice | null>(null);
+  const [newCameraName, setNewCameraName] = useState('');
+  const [newCameraUid, setNewCameraUid] = useState('');
+  const [newCameraImageUrl, setNewCameraImageUrl] = useState('');
+  const [newCameraLocation, setNewCameraLocation] = useState('');
+  const [newCameraDescription, setNewCameraDescription] = useState('');
+  const [newCameraActive, setNewCameraActive] = useState(true);
 
   useEffect(() => {
     fetchDashboardData();
@@ -156,6 +179,16 @@ const AdminDashboard = () => {
         const usersData = await usersResponse.json();
         setUsers(usersData);
       }
+
+      // Fetch cameras list
+      const camerasResponse = await fetch(CAMERA_ENDPOINTS.LIST, {
+        headers: getAuthHeaders(token),
+      });
+      
+      if (camerasResponse.ok) {
+        const camerasData = await camerasResponse.json();
+        setCameras(camerasData);
+      }
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -180,6 +213,7 @@ const AdminDashboard = () => {
     }
   };
 
+  // User Management Functions
   const handleAddUser = async () => {
     if (!newUserEmail || !newUserPassword) {
       toast({
@@ -284,6 +318,119 @@ const AdminDashboard = () => {
         fetchDashboardData();
       } else {
         throw new Error('Failed to delete user');
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Camera Management Functions
+  const handleAddCamera = async () => {
+    if (!newCameraName || !newCameraUid) {
+      toast({
+        title: 'Missing Fields',
+        description: 'Camera name and UID are required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(CAMERA_ENDPOINTS.CREATE, {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          name: newCameraName,
+          uid: newCameraUid,
+          image_url: newCameraImageUrl || undefined,
+          location: newCameraLocation || undefined,
+          description: newCameraDescription || undefined,
+          is_active: newCameraActive,
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: 'Camera added successfully',
+        });
+        // Reset form
+        setNewCameraName('');
+        setNewCameraUid('');
+        setNewCameraImageUrl('');
+        setNewCameraLocation('');
+        setNewCameraDescription('');
+        setNewCameraActive(true);
+        fetchDashboardData();
+      } else {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to add camera');
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdateCamera = async () => {
+    if (!editingCamera) return;
+
+    try {
+      const response = await fetch(CAMERA_ENDPOINTS.UPDATE(editingCamera.uid), {
+        method: 'PUT',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({
+          name: editingCamera.name,
+          image_url: editingCamera.image_url || undefined,
+          location: editingCamera.location || undefined,
+          description: editingCamera.description || undefined,
+          is_active: editingCamera.is_active,
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: 'Camera updated successfully',
+        });
+        setEditingCamera(null);
+        fetchDashboardData();
+      } else {
+        throw new Error('Failed to update camera');
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteCamera = async (uid: string) => {
+    if (!confirm('Are you sure you want to delete this camera?')) return;
+
+    try {
+      const response = await fetch(CAMERA_ENDPOINTS.DELETE(uid), {
+        method: 'DELETE',
+        headers: getAuthHeaders(token),
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: 'Camera deleted successfully',
+        });
+        fetchDashboardData();
+      } else {
+        throw new Error('Failed to delete camera');
       }
     } catch (error: any) {
       toast({
@@ -445,8 +592,8 @@ const AdminDashboard = () => {
           <Tabs defaultValue="users" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3 lg:w-[500px]">
               <TabsTrigger value="users">Users</TabsTrigger>
-              <TabsTrigger value="media">Media Files</TabsTrigger>
               <TabsTrigger value="cameras">Cameras</TabsTrigger>
+              <TabsTrigger value="media">Media Files</TabsTrigger>
             </TabsList>
 
             {/* Users Tab */}
@@ -628,6 +775,246 @@ const AdminDashboard = () => {
               </Card>
             </TabsContent>
 
+            {/* Cameras Tab */}
+            <TabsContent value="cameras" className="space-y-6">
+              {/* Add Camera Card */}
+              <Card className="p-6 border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
+                    <Camera className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold">Add New Camera</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="cam-name">Camera Name *</Label>
+                    <Input
+                      id="cam-name"
+                      placeholder="Office Camera 1"
+                      value={newCameraName}
+                      onChange={(e) => setNewCameraName(e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cam-uid">UID *</Label>
+                    <Input
+                      id="cam-uid"
+                      placeholder="CAM_001"
+                      value={newCameraUid}
+                      onChange={(e) => setNewCameraUid(e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cam-location">Location</Label>
+                    <Input
+                      id="cam-location"
+                      placeholder="Building A, Floor 2"
+                      value={newCameraLocation}
+                      onChange={(e) => setNewCameraLocation(e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cam-image">Image URL</Label>
+                    <Input
+                      id="cam-image"
+                      placeholder="https://example.com/camera.jpg"
+                      value={newCameraImageUrl}
+                      onChange={(e) => setNewCameraImageUrl(e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="cam-desc">Description</Label>
+                    <textarea
+                      id="cam-desc"
+                      placeholder="Camera description..."
+                      value={newCameraDescription}
+                      onChange={(e) => setNewCameraDescription(e.target.value)}
+                      className="mt-2 flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="cam-active"
+                      checked={newCameraActive}
+                      onChange={(e) => setNewCameraActive(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <Label htmlFor="cam-active">Active</Label>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleAddCamera} 
+                  className="mt-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 text-white"
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  Add Camera
+                </Button>
+              </Card>
+
+              {/* Cameras List */}
+              <Card className="p-6 border-slate-200 dark:border-slate-700">
+                <h2 className="text-xl font-bold mb-4">All Cameras ({cameras.length})</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {cameras.map((camera) => (
+                    <Card key={camera.id} className="p-4 border-slate-200 dark:border-slate-700">
+                      {/* Camera Image */}
+                      <div className="aspect-video bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                        {camera.image_url ? (
+                          <img 
+                            src={camera.image_url} 
+                            alt={camera.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <Camera className="w-16 h-16 text-cyan-500" />
+                        )}
+                      </div>
+
+                      {/* Camera Details */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-bold text-lg">{camera.name}</h3>
+                          {camera.is_active ? (
+                            <Power className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <PowerOff className="w-5 h-5 text-red-500" />
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Camera className="w-4 h-4" />
+                          <span className="font-mono text-xs">{camera.uid}</span>
+                        </div>
+
+                        {camera.location && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <MapPin className="w-4 h-4" />
+                            <span>{camera.location}</span>
+                          </div>
+                        )}
+
+                        {camera.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {camera.description}
+                          </p>
+                        )}
+
+                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                          <p className="text-xs text-muted-foreground">
+                            Added: {new Date(camera.created_at).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            By: {camera.created_by}
+                          </p>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setEditingCamera(camera)}
+                              >
+                                <Edit2 className="w-4 h-4 mr-1" />
+                                Edit
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Edit Camera</DialogTitle>
+                                <DialogDescription>
+                                  Update camera information
+                                </DialogDescription>
+                              </DialogHeader>
+                              {editingCamera && (
+                                <div className="space-y-4 mt-4">
+                                  <div>
+                                    <Label>Camera Name</Label>
+                                    <Input 
+                                      value={editingCamera.name} 
+                                      onChange={(e) => setEditingCamera({...editingCamera, name: e.target.value})}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label>UID (Cannot be changed)</Label>
+                                    <Input value={editingCamera.uid} disabled />
+                                  </div>
+                                  <div>
+                                    <Label>Location</Label>
+                                    <Input 
+                                      value={editingCamera.location || ''} 
+                                      onChange={(e) => setEditingCamera({...editingCamera, location: e.target.value})}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label>Image URL</Label>
+                                    <Input 
+                                      value={editingCamera.image_url || ''} 
+                                      onChange={(e) => setEditingCamera({...editingCamera, image_url: e.target.value})}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label>Description</Label>
+                                    <textarea 
+                                      value={editingCamera.description || ''} 
+                                      onChange={(e) => setEditingCamera({...editingCamera, description: e.target.value})}
+                                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                    />
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <input
+                                      type="checkbox"
+                                      id="edit-cam-active"
+                                      checked={editingCamera.is_active}
+                                      onChange={(e) => setEditingCamera({...editingCamera, is_active: e.target.checked})}
+                                      className="h-4 w-4 rounded border-gray-300"
+                                    />
+                                    <Label htmlFor="edit-cam-active">Active</Label>
+                                  </div>
+                                  <Button 
+                                    onClick={handleUpdateCamera}
+                                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
+                                  >
+                                    Update Camera
+                                  </Button>
+                                </div>
+                              )}
+                            </DialogContent>
+                          </Dialog>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => handleDeleteCamera(camera.uid)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                {cameras.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p>No cameras added yet</p>
+                    <p className="text-sm">Add your first camera above</p>
+                  </div>
+                )}
+              </Card>
+            </TabsContent>
+
             {/* Media Tab */}
             <TabsContent value="media" className="space-y-6">
               {/* Videos */}
@@ -667,6 +1054,12 @@ const AdminDashboard = () => {
                     </Card>
                   ))}
                 </div>
+                {(!stats?.media_stats.processed_videos || stats.media_stats.processed_videos.length === 0) && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <PlayCircle className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p>No videos processed yet</p>
+                  </div>
+                )}
               </Card>
 
               {/* Images */}
@@ -704,25 +1097,12 @@ const AdminDashboard = () => {
                     </Card>
                   ))}
                 </div>
-              </Card>
-            </TabsContent>
-
-            {/* Cameras Tab */}
-            <TabsContent value="cameras">
-              <Card className="p-6 border-slate-200 dark:border-slate-700">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Camera className="w-5 h-5 text-cyan-500" />
-                  Camera Management
-                </h2>
-                <div className="text-center py-12 text-muted-foreground">
-                  <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p>Camera management interface</p>
-                  <p className="text-sm">Add, edit, and monitor your Eyeora cameras</p>
-                  <Button className="mt-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white">
-                    <Camera className="w-4 h-4 mr-2" />
-                    Add Camera
-                  </Button>
-                </div>
+                {(!stats?.media_stats.processed_images || stats.media_stats.processed_images.length === 0) && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p>No images processed yet</p>
+                  </div>
+                )}
               </Card>
             </TabsContent>
           </Tabs>
