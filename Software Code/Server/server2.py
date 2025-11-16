@@ -39,6 +39,8 @@ from api.routes import auth_routes
 # NEW: live/video API routers (stored in api/routes/)
 from api.routes.live_camera_routes import router as live_camera_router
 from api.routes.video_routes import router as video_router
+from api.routes.camera_routes import router as camera_router
+from api.routes.admin_routes import router as admin_router
 
 # Import core modules
 from core.config import (
@@ -48,7 +50,7 @@ from core.config import (
     STATIC_DIR,
     CONFIDENCE_THRESHOLD,
     MODELS_DIR,
-    DATA_DIR,          # <-- added here so we can mount /data
+    DATA_DIR,
 )
 from core.detection_engine import DetectionEngine, ModelManager
 from core.video_processor import VideoProcessor
@@ -59,9 +61,7 @@ from core.csv_exporter import DataExporter
 from utils.validators import validate_video_file, validate_image_file, sanitize_filename
 from utils.video_utils import get_video_info, validate_video
 
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# NEW: DB imports (ADDED — non-breaking)
-# Requires: db/connection.py and db/startup/create_indexes.py
+# DB imports
 try:
     from db.connection import lifespan_connect, lifespan_close, get_db
     from db.startup.create_indexes import create_indexes
@@ -70,7 +70,6 @@ except Exception as _e:
     print("⚠️  DB modules not found or failed to import. MongoDB will be unavailable until fixed.")
     print(f"   ↳ {_e}")
     _DB_AVAILABLE = False
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -79,10 +78,12 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Include auth + new routers
+# Include all routers AFTER app initialization
 app.include_router(auth_routes.router)
 app.include_router(live_camera_router)
 app.include_router(video_router)
+app.include_router(camera_router)
+app.include_router(admin_router)
 
 # Add CORS middleware
 app.add_middleware(
@@ -93,6 +94,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ... rest of the code remains the same ...
 # ----------------------------
 # Global Instances
 # ----------------------------

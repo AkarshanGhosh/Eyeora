@@ -23,6 +23,54 @@ export const AUTH_ENDPOINTS = {
   
   // Get current user information
   GET_CURRENT_USER: `${API_BASE_URL}/auth/me`,
+  
+  // Logout
+  LOGOUT: `${API_BASE_URL}/auth/logout`,
+};
+
+/**
+ * Admin APIs - All require admin authentication
+ */
+export const ADMIN_ENDPOINTS = {
+  // Dashboard Analytics
+  DASHBOARD: `${API_BASE_URL}/admin/dashboard`,
+  
+  // Statistics
+  USER_STATS: `${API_BASE_URL}/admin/stats/users`,
+  CAMERA_STATS: `${API_BASE_URL}/admin/stats/cameras`,
+  MEDIA_STATS: `${API_BASE_URL}/admin/stats/media`,
+  
+  // User Management
+  LIST_USERS: `${API_BASE_URL}/admin/users`,
+  GET_USER: (userId: string) => `${API_BASE_URL}/admin/users/${userId}`,
+  UPDATE_USER: (userId: string) => `${API_BASE_URL}/admin/users/${userId}`,
+  DELETE_USER: (userId: string) => `${API_BASE_URL}/admin/users/${userId}`,
+  
+  // Media Management
+  LIST_VIDEOS: `${API_BASE_URL}/admin/media/videos`,
+  LIST_IMAGES: `${API_BASE_URL}/admin/media/images`,
+  DELETE_VIDEO: (filename: string) => `${API_BASE_URL}/admin/media/videos/${filename}`,
+  DELETE_IMAGE: (filename: string) => `${API_BASE_URL}/admin/media/images/${filename}`,
+};
+
+/**
+ * Camera Management APIs - Admin only
+ */
+export const CAMERA_ENDPOINTS = {
+  // List all cameras
+  LIST: `${API_BASE_URL}/cameras`,
+  
+  // Create new camera
+  CREATE: `${API_BASE_URL}/cameras`,
+  
+  // Get camera by UID
+  GET: (uid: string) => `${API_BASE_URL}/cameras/${uid}`,
+  
+  // Update camera
+  UPDATE: (uid: string) => `${API_BASE_URL}/cameras/${uid}`,
+  
+  // Delete camera
+  DELETE: (uid: string) => `${API_BASE_URL}/cameras/${uid}`,
 };
 
 /**
@@ -201,4 +249,32 @@ export const FRONTEND_ENDPOINTS = {
 export const LEGACY_STREAM_ENDPOINTS = {
   // Direct CV2 video feed
   VIDEO_FEED: `${API_BASE_URL}/video_feed`,
+};
+
+/**
+ * Helper function to add authentication header
+ */
+export const getAuthHeaders = (token: string | null) => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+};
+
+/**
+ * Helper function for multipart/form-data requests
+ */
+export const getAuthHeadersMultipart = (token: string | null) => {
+  const headers: Record<string, string> = {};
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
 };

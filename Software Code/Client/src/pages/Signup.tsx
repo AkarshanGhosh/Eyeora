@@ -1,28 +1,35 @@
-/**
- * Signup Page Component
- * 
- * User registration page using AUTH_ENDPOINTS.REGISTER API
- */
-
+// src/pages/Signup.tsx
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Video } from 'lucide-react';
-import { AUTH_ENDPOINTS } from '@/config/api';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Signup = () => {
-  const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password || !confirmPassword) {
+      toast({
+        title: 'Missing Fields',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     if (password !== confirmPassword) {
       toast({
@@ -33,165 +40,138 @@ const Signup = () => {
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(AUTH_ENDPOINTS.REGISTER, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: 'Registration Successful',
-          description: 'Your account has been created!',
-        });
-        // Handle successful registration
-        console.log('Registration success:', data);
-      } else {
-        toast({
-          title: 'Registration Failed',
-          description: data.message || 'Unable to create account',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
+    if (password.length < 6) {
       toast({
-        title: 'Error',
-        description: 'Unable to connect to server',
+        title: 'Weak Password',
+        description: 'Password must be at least 6 characters',
         variant: 'destructive',
       });
-      console.error('Registration error:', error);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await register(email, password, fullName || undefined);
+      toast({
+        title: 'Registration Successful',
+        description: 'Welcome to Eyeora!',
+      });
+      navigate('/'); // Changed from '/user-dashboard' to '/'
+    } catch (error: any) {
+      toast({
+        title: 'Registration Failed',
+        description: error.message || 'An error occurred',
+        variant: 'destructive',
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        {/* Logo Section */}
-        <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center shadow-glow">
-            <Video className="w-7 h-7 text-primary-foreground" />
+        {/* Logo */}
+        <Link to="/" className="flex items-center justify-center gap-2 mb-8 group">
+          <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg transition-transform group-hover:scale-110">
+            <Video className="w-7 h-7 text-white" />
           </div>
-          <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <span className="text-2xl font-bold bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">
             Eyeora
           </span>
         </Link>
 
         {/* Signup Card */}
-        <div className="bg-card rounded-2xl p-8 border border-border shadow-elegant animate-fade-in">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold mb-2">Create Your Account</h1>
-            <p className="text-muted-foreground">Start your journey with Eyeora today</p>
-          </div>
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Create Account</h1>
+          <p className="text-gray-400 mb-6">Join Eyeora today</p>
 
-          <form onSubmit={handleSignup} className="space-y-4">
-            {/* Name Field */}
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Full Name */}
+            <div>
+              <Label htmlFor="fullName" className="text-white">Full Name (Optional)</Label>
               <Input
-                id="name"
+                id="fullName"
                 type="text"
                 placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="h-11"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="mt-2 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                disabled={loading}
               />
             </div>
 
-            {/* Email Field */}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            {/* Email */}
+            <div>
+              <Label htmlFor="email" className="text-white">Email *</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="mt-2 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                disabled={loading}
                 required
-                className="h-11"
               />
             </div>
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Create a strong password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-11"
-              />
+            {/* Password */}
+            <div>
+              <Label htmlFor="password" className="text-white">Password *</Label>
+              <div className="relative mt-2">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Minimum 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 pr-10"
+                  disabled={loading}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
-            {/* Confirm Password Field */}
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+            {/* Confirm Password */}
+            <div>
+              <Label htmlFor="confirmPassword" className="text-white">Confirm Password *</Label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="Re-enter your password"
+                placeholder="Re-enter password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                className="mt-2 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                disabled={loading}
                 required
-                className="h-11"
               />
             </div>
 
-            {/* Terms & Conditions */}
-            <div className="text-xs text-muted-foreground">
-              By signing up, you agree to our{' '}
-              <a href="/terms" className="text-primary hover:text-accent">
-                Terms of Service
-              </a>{' '}
-              and{' '}
-              <a href="/privacy" className="text-primary hover:text-accent">
-                Privacy Policy
-              </a>
-            </div>
-
-            {/* Signup Button */}
+            {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full bg-gradient-primary hover:opacity-90 shadow-elegant h-11"
-              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:opacity-90 text-white shadow-lg"
+              disabled={loading}
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+              {loading ? 'Creating account...' : 'Sign Up'}
             </Button>
           </form>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or</span>
-            </div>
-          </div>
-
           {/* Login Link */}
-          <div className="text-center text-sm">
-            <span className="text-muted-foreground">Already have an account? </span>
-            <Link to="/login" className="text-primary hover:text-accent font-medium transition-colors">
+          <p className="text-center text-gray-400 mt-6">
+            Already have an account?{' '}
+            <Link to="/login" className="text-cyan-400 hover:text-cyan-300 font-medium">
               Sign in
             </Link>
-          </div>
+          </p>
         </div>
       </div>
     </div>
