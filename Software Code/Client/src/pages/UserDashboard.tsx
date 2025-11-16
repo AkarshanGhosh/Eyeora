@@ -5,16 +5,22 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/AuthContext';
+import { AUTH_ENDPOINTS } from '@/config/api';
 
 const API_BASE = 'http://localhost:8000';
 
 const UserDashboard = () => {
-  // User Info
-  const [userInfo] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    plan: 'Premium',
-    camerasAllowed: 5
+  // Auth Context
+  const { user, token, isAuthenticated } = useAuth();
+
+  // User Info - now from auth context
+  const [userInfo, setUserInfo] = useState({
+    name: '',
+    email: '',
+    plan: 'Free',
+    camerasAllowed: 5,
+    role: 'user'
   });
 
   // Video Upload
@@ -42,6 +48,19 @@ const UserDashboard = () => {
   // Refs
   const wsRefs = useRef({});
   const streamImgRefs = useRef({});
+
+  // Fetch user info on mount
+  useEffect(() => {
+    if (user) {
+      setUserInfo({
+        name: user.full_name || 'User',
+        email: user.email || '',
+        plan: user.role === 'admin' ? 'Admin' : 'Premium',
+        camerasAllowed: user.role === 'admin' ? 999 : 5,
+        role: user.role || 'user'
+      });
+    }
+  }, [user]);
 
   // Show notification
   const showNotification = (message, type = 'info') => {
@@ -114,6 +133,12 @@ const UserDashboard = () => {
       });
 
       xhr.open('POST', `${API_BASE}/video/upload?generate_output=true&export_csv=true`);
+      
+      // Add auth header if available
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      
       xhr.send(formData);
 
     } catch (error) {
@@ -124,8 +149,17 @@ const UserDashboard = () => {
 
   const startVideoProcessing = async (jobId) => {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${API_BASE}/video/process/${jobId}`, {
-        method: 'POST'
+        method: 'POST',
+        headers
       });
 
       if (response.ok) {
@@ -143,7 +177,12 @@ const UserDashboard = () => {
   const pollJobStatus = async (jobId) => {
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`${API_BASE}/video/status/${jobId}`);
+        const headers = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_BASE}/video/status/${jobId}`, { headers });
         
         if (!response.ok) {
           console.error('Failed to fetch job status:', response.status);
@@ -154,7 +193,6 @@ const UserDashboard = () => {
         const data = await response.json();
         console.log('📊 Job status:', jobId, data);
         
-        // Log error if present
         if (data.error) {
           console.error('❌ Processing error:', data.error);
         }
@@ -165,8 +203,7 @@ const UserDashboard = () => {
           clearInterval(pollInterval);
           showNotification('Video processing completed!', 'success');
           
-          // Fetch full results
-          const resultsResponse = await fetch(`${API_BASE}/video/results/${jobId}`);
+          const resultsResponse = await fetch(`${API_BASE}/video/results/${jobId}`, { headers });
           const resultsData = await resultsResponse.json();
           console.log('✅ Job results:', resultsData);
           
@@ -234,13 +271,21 @@ const UserDashboard = () => {
     }
 
     try {
-      const statusResponse = await fetch(`${API_BASE}/live/camera/status?camera_index=${camera.uid}`);
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const statusResponse = await fetch(
+        `${API_BASE}/live/camera/status?camera_index=${camera.uid}`,
+        { headers }
+      );
       const statusData = await statusResponse.json();
 
       if (!statusData.is_running) {
         const response = await fetch(
           `${API_BASE}/live/camera/start?camera_index=${camera.uid}&enable_pose=false&enable_clothing=true&enable_tracking=true&enable_objects=true`,
-          { method: 'POST' }
+          { method: 'POST', headers }
         );
         
         const data = await response.json();
@@ -283,9 +328,15 @@ const UserDashboard = () => {
         delete wsRefs.current[stream.id];
       }
 
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const camera = savedCameras.find(c => c.id === cameraId);
       await fetch(`${API_BASE}/live/camera/stop?camera_index=${camera.uid}`, {
-        method: 'POST'
+        method: 'POST',
+        headers
       });
       
       setActiveStreams(prev => prev.filter(s => s.cameraId !== cameraId));
@@ -326,13 +377,11 @@ const UserDashboard = () => {
         const data = JSON.parse(event.data);
         
         if (data.type === 'statistics') {
-          // Debug: Log the received statistics with full details
           console.log('📊 Received stats for', streamId);
           console.log('   FPS:', data.data.fps);
           console.log('   People:', data.data.people_detected);
           console.log('   Objects:', data.data.objects_detected);
           console.log('   Live Persons:', data.data.live_persons?.length);
-          console.log('   Full data:', data.data);
           
           setStreamStats(prev => ({
             ...prev,
@@ -385,7 +434,9 @@ const UserDashboard = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">User Dashboard</h1>
-                <p className="text-sm text-gray-500">Welcome back! Choose an option to get started.</p>
+                <p className="text-sm text-gray-500">
+                  Welcome back, {userInfo.name}! Choose an option to get started.
+                </p>
               </div>
             </div>
             <Button className="bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 flex items-center gap-2">
@@ -423,9 +474,9 @@ const UserDashboard = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { label: 'Name', value: userInfo.name },
+                { label: 'Name', value: userInfo.name || 'Not set' },
                 { label: 'Email', value: userInfo.email },
-                { label: 'Plan', value: userInfo.plan, highlight: true },
+                { label: 'Account Type', value: userInfo.plan, highlight: true },
                 { label: 'Cameras', value: `${savedCameras.length} / ${userInfo.camerasAllowed}` }
               ].map((item, idx) => (
                 <div key={idx}>
@@ -436,6 +487,14 @@ const UserDashboard = () => {
                 </div>
               ))}
             </div>
+            
+            {/* User ID Badge */}
+            {user && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <Label className="text-gray-500 text-xs">User ID</Label>
+                <p className="text-xs text-gray-400 font-mono mt-1">{user.id}</p>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -731,7 +790,7 @@ const UserDashboard = () => {
                               }}
                             />
                             
-                            {/* Stats Overlay (like in video) */}
+                            {/* Stats Overlay */}
                             {stats && Object.keys(stats).length > 0 && (
                               <div className="absolute top-12 left-2 bg-black/70 text-white text-xs p-2 rounded space-y-0.5 font-mono">
                                 <div>FPS: {typeof stats.fps === 'number' ? stats.fps.toFixed(1) : '0.0'}</div>

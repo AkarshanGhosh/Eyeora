@@ -1,0 +1,23 @@
+============================================================
+EYEORA ANALYTICS SUMMARY REPORT
+============================================================
+
+Generated: 2025-11-16 23:10:28
+Data File: analytics_20251116_231028.csv
+
+VISITOR STATISTICS
+------------------------------------------------------------
+Total Visitors: 24
+Total Customers (Purchased): 2
+Window Shoppers: 0
+Browsers: 9
+Passing Through: 5
+Idle: 8
+
+KEY METRICS
+------------------------------------------------------------
+Conversion Rate: 8.33%
+Average Visit Duration: 22.53s
+Checkout Area Visitors: 2
+
+============================================================

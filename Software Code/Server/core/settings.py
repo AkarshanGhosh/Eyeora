@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # CORS Configuration
-    CORS_ORIGINS: list = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS: list = ["http://localhost:5173", "http://localhost:3000","http://localhost:8080"]
 
     # File Paths
     @property
