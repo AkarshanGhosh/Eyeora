@@ -48,6 +48,8 @@ String backend_url = "";
 int pan_angle = 90;
 int tilt_angle = 90;
 
+bool sta_connected = false;
+
 camera_config_t camera_config = {
     .pin_pwdn = PWDN_GPIO_NUM,
     .pin_reset = RESET_GPIO_NUM,
@@ -95,27 +97,36 @@ void setup() {
     }
     Serial.println("✅ Camera initialized");
     
+    // Always start AP mode
+    startAPMode();
+    
+    // Try to connect to WiFi if credentials exist
     if (wifi_ssid.length() > 0) {
         connectWiFi();
     }
     
-    if (WiFi.status() != WL_CONNECTED) {
-        startAPMode();
-    } else {
-        startCameraMode();
-    }
+    // Start web server
+    startWebServer();
 }
 
 void loop() {
-    if (WiFi.getMode() == WIFI_AP) {
-        dnsServer.processNextRequest();
-    }
+    // Always process DNS requests
+    dnsServer.processNextRequest();
     
     server.handleClient();
     
-    if (WiFi.status() != WL_CONNECTED && WiFi.getMode() == WIFI_STA) {
-        Serial.println("⚠️ Lost connection, switching to AP");
-        startAPMode();
+    // Monitor WiFi connection status
+    static unsigned long lastCheck = 0;
+    if (millis() - lastCheck > 10000) { // Check every 10 seconds
+        lastCheck = millis();
+        
+        if (wifi_ssid.length() > 0 && WiFi.status() != WL_CONNECTED && sta_connected) {
+            Serial.println("⚠️ WiFi connection lost, attempting reconnect...");
+            connectWiFi();
+        }
+        
+        // Update connection status
+        sta_connected = (WiFi.status() == WL_CONNECTED);
     }
 }
 
@@ -137,7 +148,7 @@ void setServoAngle(int pin, int angle) {
 
 void connectWiFi() {
     Serial.println("📡 Connecting to: " + wifi_ssid);
-    WiFi.mode(WIFI_STA);
+    WiFi.mode(WIFI_AP_STA); // Both AP and Station mode
     WiFi.begin(wifi_ssid.c_str(), wifi_pass.c_str());
     
     int attempts = 0;
@@ -148,11 +159,14 @@ void connectWiFi() {
     }
     
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("\n✅ Connected!");
-        Serial.println("📍 IP: " + WiFi.localIP().toString());
+        Serial.println("\n✅ WiFi Connected!");
+        Serial.println("📍 Station IP: " + WiFi.localIP().toString());
+        sta_connected = true;
         discoverBackend();
+        registerWithBackend();
     } else {
-        Serial.println("\n❌ Connection failed");
+        Serial.println("\n❌ WiFi Connection failed");
+        sta_connected = false;
     }
 }
 
@@ -225,51 +239,85 @@ bool pingBackend(String url) {
 
 void startAPMode() {
     Serial.println("\n📡 Starting AP Mode");
-    WiFi.mode(WIFI_AP);
+    WiFi.mode(WIFI_AP_STA); // Dual mode
     WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
     WiFi.softAP(AP_SSID, AP_PASSWORD);
     
-    Serial.println("✅ AP Started");
+    Serial.println("✅ AP Started (Always On)");
     Serial.println("   SSID: " + String(AP_SSID));
     Serial.println("   Password: " + String(AP_PASSWORD));
-    Serial.println("   IP: " + WiFi.softAPIP().toString());
+    Serial.println("   AP IP: " + WiFi.softAPIP().toString());
     
     dnsServer.start(DNS_PORT, "*", apIP);
-    
-    server.on("/", handleConfigPage);
-    server.on("/generate_204", handleConfigPage);
-    server.on("/fwlink", handleConfigPage);
-    server.on("/hotspot-detect.html", handleConfigPage);
-    server.on("/save", HTTP_POST, handleSaveConfig);
-    server.onNotFound(handleConfigPage);
-    
-    server.begin();
     Serial.println("✅ Captive portal active");
 }
 
-void startCameraMode() {
-    Serial.println("\n🎥 Starting Camera Mode");
-    Serial.println("   IP: " + WiFi.localIP().toString());
+void startWebServer() {
+    Serial.println("\n🌐 Starting Web Server");
     
-    server.on("/", handleRoot);
+    // Configuration and test pages
+    server.on("/", handleMainPage);
+    server.on("/config", handleConfigPage);
+    server.on("/test", handleTestPage);
     server.on("/stream", handleStream);
     server.on("/servo", HTTP_GET, handleServo);
     server.on("/status", handleStatus);
-    server.begin();
-    Serial.println("✅ Camera server running");
+    server.on("/save", HTTP_POST, handleSaveConfig);
     
-    registerWithBackend();
+    // Captive portal endpoints
+    server.on("/generate_204", handleMainPage);
+    server.on("/fwlink", handleMainPage);
+    server.on("/hotspot-detect.html", handleMainPage);
+    server.onNotFound(handleMainPage);
+    
+    server.begin();
+    Serial.println("✅ Web server running on both AP and STA");
 }
 
-void handleRoot() {
-    String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>";
-    html += "<style>body{font-family:Arial;padding:20px;background:#0f172a;color:#fff;text-align:center}";
-    html += "h1{color:#38bdf8}img{max-width:100%;border:2px solid #38bdf8;border-radius:8px;margin-top:20px}</style></head>";
-    html += "<body><h1>🎥 Proto1 Camera</h1>";
-    html += "<p>UID: <code>" + String(CAMERA_UID) + "</code></p>";
-    html += "<p>Backend: <code>" + backend_url + "</code></p>";
-    html += "<p style='color:#10b981'>● Online</p>";
-    html += "<img src='/stream' alt='Camera Stream'>";
+void handleMainPage() {
+    String html = "<!DOCTYPE html><html><head>";
+    html += "<meta name='viewport' content='width=device-width,initial-scale=1'>";
+    html += "<style>";
+    html += "body{font-family:Arial;padding:20px;background:#0f172a;color:#fff;text-align:center;margin:0}";
+    html += "h1{color:#38bdf8;margin-bottom:10px}";
+    html += ".status-box{max-width:500px;margin:20px auto;padding:20px;background:#1e293b;border-radius:10px;border:2px solid #38bdf8}";
+    html += ".status-item{margin:10px 0;padding:10px;background:#0f172a;border-radius:5px}";
+    html += ".online{color:#10b981}";
+    html += ".offline{color:#ef4444}";
+    html += "button{width:80%;max-width:400px;padding:15px;margin:10px 0;border-radius:8px;border:none;font-size:16px;cursor:pointer;font-weight:bold}";
+    html += ".btn-config{background:#38bdf8;color:#0f172a}";
+    html += ".btn-test{background:#10b981;color:#fff}";
+    html += ".btn-stream{background:#8b5cf6;color:#fff}";
+    html += "button:hover{opacity:0.8}";
+    html += ".info{color:#94a3b8;font-size:14px;margin-top:20px}";
+    html += "</style></head>";
+    html += "<body><h1>🎥 Proto1 Control Panel</h1>";
+    
+    html += "<div class='status-box'>";
+    html += "<h3>📊 System Status</h3>";
+    html += "<div class='status-item'>AP Mode: <span class='online'>● Always Active</span></div>";
+    html += "<div class='status-item'>AP IP: <code>192.168.4.1</code></div>";
+    
+    if (sta_connected) {
+        html += "<div class='status-item'>WiFi: <span class='online'>● Connected</span></div>";
+        html += "<div class='status-item'>Network: <code>" + wifi_ssid + "</code></div>";
+        html += "<div class='status-item'>Station IP: <code>" + WiFi.localIP().toString() + "</code></div>";
+        if (backend_url.length() > 0) {
+            html += "<div class='status-item'>Backend: <span class='online'>● Found</span></div>";
+        }
+    } else {
+        html += "<div class='status-item'>WiFi: <span class='offline'>● Not Connected</span></div>";
+        html += "<div class='status-item'>Configure WiFi to connect</div>";
+    }
+    
+    html += "</div>";
+    
+    html += "<button class='btn-config' onclick='location.href=\"/config\"'>⚙️ WiFi Configuration</button>";
+    html += "<button class='btn-test' onclick='location.href=\"/test\"'>🔧 Test Camera & Servos</button>";
+    html += "<button class='btn-stream' onclick='location.href=\"/stream\"'>📹 View Stream Only</button>";
+    
+    html += "<p class='info'>UID: " + String(CAMERA_UID) + "</p>";
+    html += "<p class='info'>Hotspot stays on - reconfigure anytime!</p>";
     html += "</body></html>";
     
     server.send(200, "text/html", html);
@@ -278,19 +326,100 @@ void handleRoot() {
 void handleConfigPage() {
     String html = "<!DOCTYPE html><html><head>";
     html += "<meta name='viewport' content='width=device-width,initial-scale=1'>";
-    html += "<style>body{font-family:Arial;padding:20px;background:#0f172a;color:#fff;text-align:center}";
+    html += "<style>";
+    html += "body{font-family:Arial;padding:20px;background:#0f172a;color:#fff;text-align:center;margin:0}";
     html += "input,button{width:80%;max-width:400px;padding:12px;margin:10px 0;border-radius:5px;border:none;font-size:16px}";
     html += "input{background:#1e293b;color:#fff;border:1px solid #38bdf8}";
     html += "button{background:#38bdf8;cursor:pointer;font-weight:bold;color:#0f172a}";
-    html += "h1{color:#38bdf8}.info{color:#94a3b8;margin:20px 0}</style></head>";
-    html += "<body><h1>🎥 Proto1 Setup</h1>";
-    html += "<p class='info'>Connect Proto1 to WiFi</p>";
+    html += "button:hover{background:#0ea5e9}";
+    html += ".btn-back{background:#64748b;color:#fff;margin-top:20px}";
+    html += "h1{color:#38bdf8;margin-bottom:10px}";
+    html += ".info{color:#94a3b8;margin:20px 0;font-size:14px}";
+    html += ".current{background:#1e293b;padding:15px;border-radius:8px;margin:20px auto;max-width:400px}";
+    html += "</style></head>";
+    html += "<body><h1>⚙️ WiFi Configuration</h1>";
+    
+    if (wifi_ssid.length() > 0) {
+        html += "<div class='current'>";
+        html += "<p style='color:#94a3b8;margin:5px'>Current Network:</p>";
+        html += "<p style='color:#38bdf8;font-size:18px;margin:5px'>" + wifi_ssid + "</p>";
+        if (sta_connected) {
+            html += "<p style='color:#10b981;margin:5px'>● Connected</p>";
+        } else {
+            html += "<p style='color:#ef4444;margin:5px'>● Disconnected</p>";
+        }
+        html += "</div>";
+    }
+    
+    html += "<p class='info'>Enter new WiFi credentials</p>";
     html += "<form action='/save' method='post'>";
-    html += "<input name='ssid' placeholder='WiFi Network Name' required>";
+    html += "<input name='ssid' placeholder='WiFi Network Name' value='" + wifi_ssid + "' required>";
     html += "<input name='pass' type='password' placeholder='WiFi Password' required>";
-    html += "<button type='submit'>Connect</button>";
+    html += "<button type='submit'>💾 Save & Connect</button>";
     html += "</form>";
-    html += "<p class='info' style='font-size:12px;margin-top:30px'>Backend server will be auto-detected</p>";
+    html += "<button class='btn-back' onclick='location.href=\"/\"'>← Back to Home</button>";
+    html += "<p class='info' style='font-size:12px;margin-top:30px'>AP Mode stays active during WiFi connection</p>";
+    html += "</body></html>";
+    
+    server.send(200, "text/html", html);
+}
+
+void handleTestPage() {
+    String html = "<!DOCTYPE html><html><head>";
+    html += "<meta name='viewport' content='width=device-width,initial-scale=1'>";
+    html += "<style>";
+    html += "body{font-family:Arial;padding:20px;background:#0f172a;color:#fff;text-align:center;margin:0}";
+    html += "h1{color:#38bdf8;margin-bottom:10px}";
+    html += ".video-container{max-width:640px;margin:20px auto;border:2px solid #38bdf8;border-radius:8px;overflow:hidden}";
+    html += "img{width:100%;display:block}";
+    html += ".controls{max-width:640px;margin:20px auto}";
+    html += ".control-group{margin:20px 0;padding:20px;background:#1e293b;border-radius:8px}";
+    html += ".control-group h3{color:#38bdf8;margin-top:0}";
+    html += "button{padding:15px 30px;margin:5px;border:none;border-radius:5px;font-size:16px;cursor:pointer;font-weight:bold}";
+    html += ".btn-pan{background:#3b82f6;color:#fff}";
+    html += ".btn-tilt{background:#8b5cf6;color:#fff}";
+    html += ".btn-center{background:#10b981;color:#fff}";
+    html += ".btn-back{background:#ef4444;color:#fff;width:200px}";
+    html += "button:hover{opacity:0.8}";
+    html += ".status{color:#94a3b8;font-size:14px;margin-top:10px}";
+    html += "</style></head>";
+    html += "<body>";
+    html += "<h1>🔧 Camera & Servo Test</h1>";
+    html += "<div class='video-container'><img src='/stream' alt='Live Stream'></div>";
+    
+    html += "<div class='controls'>";
+    
+    html += "<div class='control-group'>";
+    html += "<h3>Pan Control (Left/Right)</h3>";
+    html += "<button class='btn-pan' onclick='movePan(0)'>◄◄ Left</button>";
+    html += "<button class='btn-center' onclick='movePan(90)'>● Center</button>";
+    html += "<button class='btn-pan' onclick='movePan(180)'>Right ►►</button>";
+    html += "<div class='status' id='pan-status'>Pan: 90°</div>";
+    html += "</div>";
+    
+    html += "<div class='control-group'>";
+    html += "<h3>Tilt Control (Up/Down)</h3>";
+    html += "<button class='btn-tilt' onclick='moveTilt(0)'>▲▲ Up</button>";
+    html += "<button class='btn-center' onclick='moveTilt(90)'>● Center</button>";
+    html += "<button class='btn-tilt' onclick='moveTilt(180)'>Down ▼▼</button>";
+    html += "<div class='status' id='tilt-status'>Tilt: 90°</div>";
+    html += "</div>";
+    
+    html += "<button class='btn-back' onclick='location.href=\"/\"'>← Back to Home</button>";
+    html += "</div>";
+    
+    html += "<script>";
+    html += "function movePan(angle){";
+    html += "fetch('/servo?pan='+angle).then(r=>r.json()).then(d=>{";
+    html += "document.getElementById('pan-status').textContent='Pan: '+d.pan+'°';";
+    html += "}).catch(e=>console.error(e));}";
+    
+    html += "function moveTilt(angle){";
+    html += "fetch('/servo?tilt='+angle).then(r=>r.json()).then(d=>{";
+    html += "document.getElementById('tilt-status').textContent='Tilt: '+d.tilt+'°';";
+    html += "}).catch(e=>console.error(e));}";
+    html += "</script>";
+    
     html += "</body></html>";
     
     server.send(200, "text/html", html);
@@ -314,11 +443,14 @@ void handleSaveConfig() {
     html += "<body><h1>✅ Saved</h1>";
     html += "<div class='spinner'></div>";
     html += "<p>Connecting to " + wifi_ssid + "...</p>";
+    html += "<p style='font-size:14px;color:#94a3b8;margin-top:20px'>AP Mode stays active!</p>";
+    html += "<p style='font-size:12px;color:#94a3b8'>Reconnect to 'proto1' hotspot to check status</p>";
     html += "</body></html>";
     
     server.send(200, "text/html", html);
-    delay(3000);
-    ESP.restart();
+    
+    delay(1000);
+    connectWiFi(); // Try to connect without restarting
 }
 
 void handleStream() {
@@ -347,25 +479,39 @@ void handleServo() {
     if (server.hasArg("pan")) {
         pan_angle = server.arg("pan").toInt();
         setServoAngle(SERVO_PIN_PAN, pan_angle);
+        Serial.println("Pan: " + String(pan_angle) + "°");
     }
     
     if (server.hasArg("tilt")) {
         tilt_angle = server.arg("tilt").toInt();
         setServoAngle(SERVO_PIN_TILT, tilt_angle);
+        Serial.println("Tilt: " + String(tilt_angle) + "°");
     }
     
     server.send(200, "application/json", "{\"pan\":" + String(pan_angle) + ",\"tilt\":" + String(tilt_angle) + "}");
 }
 
 void handleStatus() {
-    String json = "{\"uid\":\"" + String(CAMERA_UID) + "\",\"name\":\"" + String(CAMERA_NAME) + "\",";
-    json += "\"ip\":\"" + WiFi.localIP().toString() + "\",\"rssi\":" + String(WiFi.RSSI()) + ",";
-    json += "\"backend\":\"" + backend_url + "\"}";
+    String json = "{";
+    json += "\"uid\":\"" + String(CAMERA_UID) + "\",";
+    json += "\"name\":\"" + String(CAMERA_NAME) + "\",";
+    json += "\"ap_ip\":\"" + WiFi.softAPIP().toString() + "\",";
+    json += "\"sta_connected\":" + String(sta_connected ? "true" : "false") + ",";
+    
+    if (sta_connected) {
+        json += "\"sta_ip\":\"" + WiFi.localIP().toString() + "\",";
+        json += "\"ssid\":\"" + wifi_ssid + "\",";
+        json += "\"rssi\":" + String(WiFi.RSSI()) + ",";
+    }
+    
+    json += "\"backend\":\"" + backend_url + "\"";
+    json += "}";
+    
     server.send(200, "application/json", json);
 }
 
 void registerWithBackend() {
-    if (backend_url.length() == 0) return;
+    if (backend_url.length() == 0 || !sta_connected) return;
     
     Serial.println("\n📡 Registering with backend...");
     
