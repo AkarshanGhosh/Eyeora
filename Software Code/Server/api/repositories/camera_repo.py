@@ -2,6 +2,7 @@
 from typing import Optional, List
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from urllib.parse import unquote
 
 class CameraRepository:
     """
@@ -11,10 +12,13 @@ class CameraRepository:
         self.col = db["cameras"]
 
     async def get_by_uid(self, uid: str) -> Optional[dict]:
-        return await self.col.find_one({"uid": uid})
+        # Decode URL-encoded UID
+        decoded_uid = unquote(uid)
+        return await self.col.find_one({"uid": decoded_uid})
 
     async def get_by_id(self, camera_id: str) -> Optional[dict]:
-        return await self.col.find_one({"_id": camera_id})
+        decoded_id = unquote(camera_id)
+        return await self.col.find_one({"_id": decoded_id})
 
     async def get_all(self, skip: int = 0, limit: int = 100) -> List[dict]:
         cursor = self.col.find().skip(skip).limit(limit).sort("created_at", -1)
@@ -47,15 +51,17 @@ class CameraRepository:
         return doc
 
     async def update_camera(self, uid: str, update_data: dict) -> bool:
+        decoded_uid = unquote(uid)
         update_data["updated_at"] = datetime.utcnow()
         result = await self.col.update_one(
-            {"uid": uid},
+            {"uid": decoded_uid},
             {"$set": update_data}
         )
         return result.modified_count > 0
 
     async def delete_camera(self, uid: str) -> bool:
-        result = await self.col.delete_one({"uid": uid})
+        decoded_uid = unquote(uid)
+        result = await self.col.delete_one({"uid": decoded_uid})
         return result.deleted_count > 0
 
 __all__ = ["CameraRepository"]

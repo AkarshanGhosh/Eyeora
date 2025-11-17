@@ -34,7 +34,19 @@ async def create_camera(
         created_by=admin["id"]
     )
     
-    return CameraPublic(**created)
+    # Convert _id to id for Pydantic model
+    return CameraPublic(
+        id=created["_id"],
+        name=created["name"],
+        uid=created["uid"],
+        image_url=created.get("image_url"),
+        location=created.get("location"),
+        description=created.get("description"),
+        is_active=created["is_active"],
+        created_at=created["created_at"],
+        updated_at=created["updated_at"],
+        created_by=created["created_by"]
+    )
 
 @router.get("/", response_model=List[CameraPublic])
 async def list_cameras(
@@ -46,7 +58,28 @@ async def list_cameras(
     """List all cameras (Admin only)"""
     repo = CameraRepository(db)
     cameras = await repo.get_all(skip=skip, limit=limit)
-    return [CameraPublic(**cam) for cam in cameras]
+    
+    # Convert _id to id for each camera
+    result = []
+    for cam in cameras:
+        try:
+            result.append(CameraPublic(
+                id=cam["_id"],
+                name=cam["name"],
+                uid=cam["uid"],
+                image_url=cam.get("image_url"),
+                location=cam.get("location"),
+                description=cam.get("description"),
+                is_active=cam["is_active"],
+                created_at=cam["created_at"],
+                updated_at=cam["updated_at"],
+                created_by=cam["created_by"]
+            ))
+        except Exception as e:
+            print(f"⚠️  Error converting camera {cam.get('_id')}: {e}")
+            continue
+    
+    return result
 
 @router.get("/{uid}", response_model=CameraPublic)
 async def get_camera(
@@ -59,7 +92,19 @@ async def get_camera(
     camera = await repo.get_by_uid(uid)
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
-    return CameraPublic(**camera)
+    
+    return CameraPublic(
+        id=camera["_id"],
+        name=camera["name"],
+        uid=camera["uid"],
+        image_url=camera.get("image_url"),
+        location=camera.get("location"),
+        description=camera.get("description"),
+        is_active=camera["is_active"],
+        created_at=camera["created_at"],
+        updated_at=camera["updated_at"],
+        created_by=camera["created_by"]
+    )
 
 @router.put("/{uid}", response_model=CameraPublic)
 async def update_camera(
@@ -88,7 +133,18 @@ async def update_camera(
     
     # Return updated camera
     updated = await repo.get_by_uid(uid)
-    return CameraPublic(**updated)
+    return CameraPublic(
+        id=updated["_id"],
+        name=updated["name"],
+        uid=updated["uid"],
+        image_url=updated.get("image_url"),
+        location=updated.get("location"),
+        description=updated.get("description"),
+        is_active=updated["is_active"],
+        created_at=updated["created_at"],
+        updated_at=updated["updated_at"],
+        created_by=updated["created_by"]
+    )
 
 @router.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_camera(

@@ -339,13 +339,23 @@ const AdminDashboard = () => {
       return;
     }
 
+    // Sanitize UID: remove special characters
+    const sanitizedUid = newCameraUid.replace(/[^a-zA-Z0-9_-]/g, '_');
+    
+    if (sanitizedUid !== newCameraUid) {
+      toast({
+        title: 'UID Modified',
+        description: `Special characters removed. UID changed to: ${sanitizedUid}`,
+      });
+    }
+
     try {
       const response = await fetch(CAMERA_ENDPOINTS.CREATE, {
         method: 'POST',
         headers: getAuthHeaders(token),
         body: JSON.stringify({
           name: newCameraName,
-          uid: newCameraUid,
+          uid: sanitizedUid,  // Use sanitized UID
           image_url: newCameraImageUrl || undefined,
           location: newCameraLocation || undefined,
           description: newCameraDescription || undefined,
@@ -378,12 +388,15 @@ const AdminDashboard = () => {
       });
     }
   };
-
+// Handle Update
   const handleUpdateCamera = async () => {
     if (!editingCamera) return;
 
     try {
-      const response = await fetch(CAMERA_ENDPOINTS.UPDATE(editingCamera.uid), {
+      // Encode the UID for URL safety
+      const encodedUid = encodeURIComponent(editingCamera.uid);
+      
+      const response = await fetch(CAMERA_ENDPOINTS.UPDATE(encodedUid), {
         method: 'PUT',
         headers: getAuthHeaders(token),
         body: JSON.stringify({
@@ -413,12 +426,15 @@ const AdminDashboard = () => {
       });
     }
   };
-
+// Handle Delete
   const handleDeleteCamera = async (uid: string) => {
     if (!confirm('Are you sure you want to delete this camera?')) return;
 
     try {
-      const response = await fetch(CAMERA_ENDPOINTS.DELETE(uid), {
+      // Encode the UID for URL safety
+      const encodedUid = encodeURIComponent(uid);
+      
+      const response = await fetch(CAMERA_ENDPOINTS.DELETE(encodedUid), {
         method: 'DELETE',
         headers: getAuthHeaders(token),
       });
@@ -440,38 +456,6 @@ const AdminDashboard = () => {
       });
     }
   };
-
-  const handleDeleteMedia = async (filename: string, type: 'video' | 'image') => {
-    if (!confirm(`Delete this ${type}?`)) return;
-
-    try {
-      const endpoint = type === 'video' 
-        ? ADMIN_ENDPOINTS.DELETE_VIDEO(filename)
-        : ADMIN_ENDPOINTS.DELETE_IMAGE(filename);
-        
-      const response = await fetch(endpoint, {
-        method: 'DELETE',
-        headers: getAuthHeaders(token),
-      });
-
-      if (response.ok) {
-        toast({
-          title: 'Success',
-          description: `${type} deleted successfully`,
-        });
-        fetchDashboardData();
-      } else {
-        throw new Error(`Failed to delete ${type}`);
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
