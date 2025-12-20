@@ -1,0 +1,55 @@
+======================================================================
+COMPLETE VIDEO ANALYSIS REPORT
+======================================================================
+
+Generated: 2025-12-20 23:54:25
+Video: Knives_that_are_BANNED_Globally_shorts_youtubeshorts_480P.mp4
+Duration: 60.10s
+Resolution: 608x1080
+
+BEHAVIOR ANALYSIS
+----------------------------------------------------------------------
+Total Visitors: 2
+Purchasers: 0
+Window Shoppers: 0
+Browsers: 1
+Passing Through: 1
+Conversion Rate: 0.0%
+Avg Visit Duration: 8.18s
+
+WEAPON DETECTION
+----------------------------------------------------------------------
+Threat Level: MEDIUM
+Total Frames Analyzed: 180
+Abnormal Frames: 23 (12.78%)
+Total Weapons Detected: 23
+
+WEAPON TYPES
+----------------------------------------------------------------------
+weapon_detected: 23
+
+ABNORMAL FRAMES TIMELINE (first 50)
+----------------------------------------------------------------------
+Frame 70 (2.34s): 1 weapons
+Frame 260 (8.68s): 1 weapons
+Frame 270 (9.02s): 1 weapons
+Frame 280 (9.35s): 1 weapons
+Frame 570 (19.03s): 1 weapons
+Frame 620 (20.70s): 1 weapons
+Frame 720 (24.04s): 1 weapons
+Frame 800 (26.71s): 1 weapons
+Frame 810 (27.05s): 1 weapons
+Frame 820 (27.38s): 1 weapons
+Frame 830 (27.71s): 1 weapons
+Frame 840 (28.05s): 1 weapons
+Frame 850 (28.38s): 1 weapons
+Frame 930 (31.05s): 1 weapons
+Frame 1070 (35.73s): 1 weapons
+Frame 1080 (36.06s): 1 weapons
+Frame 1100 (36.73s): 1 weapons
+Frame 1110 (37.06s): 1 weapons
+Frame 1290 (43.07s): 1 weapons
+Frame 1320 (44.07s): 1 weapons
+Frame 1620 (54.09s): 1 weapons
+Frame 1750 (58.43s): 1 weapons
+Frame 1780 (59.43s): 1 weapons

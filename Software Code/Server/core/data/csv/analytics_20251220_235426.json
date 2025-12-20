@@ -1,0 +1,83 @@
+{
+  "export_timestamp": "2025-12-20T23:54:26.271420",
+  "total_tracks": 2,
+  "summary": {
+    "total_visitors": 2,
+    "total_customers": 0,
+    "window_shoppers": 0,
+    "browsers": 1,
+    "purchasers": 0,
+    "passing_through": 1,
+    "idle": 0,
+    "conversion_rate": 0.0,
+    "avg_visit_duration": 8.18,
+    "total_checkout_visitors": 0,
+    "behavior_distribution": {
+      "passing_through": 1,
+      "browsing": 1
+    },
+    "total_frames_analyzed": 180,
+    "abnormal_frames": 23,
+    "abnormal_percentage": 12.78,
+    "threat_level": "MEDIUM",
+    "abnormality_types": {
+      "weapon_detected": 23
+    },
+    "total_threats_detected": 23
+  },
+  "tracks": [
+    {
+      "track_id": 2,
+      "uuid": "996fd3d1",
+      "behavior": "passing_through",
+      "confidence": 0.5,
+      "details": "Insufficient tracking data",
+      "duration": 4.3405555555555555,
+      "zones_visited": [],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 211.24490487645153,
+      "is_stationary": false,
+      "entry_time": 10.684444444444445,
+      "exit_time": 0,
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "standing",
+      "activity_history": [
+        "standing",
+        "standing"
+      ]
+    },
+    {
+      "track_id": 4,
+      "uuid": "32a4ba70",
+      "behavior": "browsing",
+      "confidence": 0.85,
+      "duration": 12.02,
+      "zones_visited": [
+        "exit"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 348.1535412572233,
+      "is_stationary": false,
+      "entry_time": 18.03,
+      "exit_time": 0,
+      "details": "Active browsing for 12.0s, moved 348px",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "standing",
+      "activity_history": [
+        "standing",
+        "standing",
+        "standing",
+        "sitting",
+        "sitting"
+      ]
+    }
+  ]
+}
