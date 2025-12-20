@@ -1,0 +1,28 @@
+======================================================================
+COMPLETE VIDEO ANALYSIS REPORT
+======================================================================
+
+Generated: 2025-12-20 22:39:27
+Video: WhatsApp Video 2025-11-12 at 00.10.01_0414feba.mp4
+Duration: 97.99s
+Resolution: 848x480
+
+BEHAVIOR ANALYSIS
+----------------------------------------------------------------------
+Total Visitors: 24
+Purchasers: 2
+Window Shoppers: 0
+Browsers: 9
+Passing Through: 5
+Conversion Rate: 8.33%
+Avg Visit Duration: 22.53s
+
+WEAPON DETECTION
+----------------------------------------------------------------------
+Threat Level: LOW
+Total Frames Analyzed: 128
+Abnormal Frames: 0 (0.0%)
+Total Weapons Detected: 0
+
+ABNORMAL FRAMES TIMELINE (first 50)
+----------------------------------------------------------------------

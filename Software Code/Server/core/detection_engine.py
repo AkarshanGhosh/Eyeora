@@ -19,19 +19,13 @@ from core.tracker import Detection
 
 
 class AbnormalityDetector:
-    """
-    Detects abnormal objects and behaviors
-    """
+    """Detects abnormal objects and behaviors"""
     
-    # Abnormal/threat objects mapping
     THREAT_OBJECTS = {
         'knife': 43,
         'scissors': 76,
-        # Note: COCO doesn't have 'gun' class by default
-        # You would need a custom-trained model for gun detection
     }
     
-    # Suspicious poses/behaviors
     SUSPICIOUS_BEHAVIORS = [
         'pointing',
         'aiming',
@@ -40,17 +34,12 @@ class AbnormalityDetector:
     
     def __init__(self):
         """Initialize abnormality detector"""
-        self.threat_history = {}  # Track threats over time
-        self.alert_threshold = 0.6  # Confidence threshold for alerts
-        
-        # Try to load weapon detection model if available
+        self.threat_history = {}
+        self.alert_threshold = 0.6
         self.weapon_model = self._load_weapon_model()
     
     def _load_weapon_model(self) -> Optional[YOLO]:
-        """
-        Load specialized weapon detection model if available
-        You can train or download a weapon detection model
-        """
+        """Load specialized weapon detection model if available"""
         weapon_model_path = MODELS_DIR / "weapon_detection.pt"
         
         if weapon_model_path.exists():
@@ -61,15 +50,7 @@ class AbnormalityDetector:
             return None
     
     def detect_weapons(self, image: np.ndarray) -> List[Detection]:
-        """
-        Detect weapons in image using specialized model
-        
-        Args:
-            image: Input image
-            
-        Returns:
-            List of weapon detections
-        """
+        """Detect weapons in image using specialized model"""
         if self.weapon_model is None:
             return []
         
@@ -81,8 +62,6 @@ class AbnormalityDetector:
                 bbox = box.xyxy[0].cpu().numpy().tolist()
                 confidence = float(box.conf[0])
                 class_id = int(box.cls[0])
-                
-                # Get class name from model
                 class_name = results.names[class_id] if class_id in results.names else "weapon"
                 
                 detection = Detection(
@@ -99,97 +78,17 @@ class AbnormalityDetector:
             print(f"❌ Weapon detection error: {e}")
             return []
     
-    def detect_threatening_poses(self, keypoints: np.ndarray) -> Dict:
-        """
-        Detect threatening poses from keypoints
-        
-        Args:
-            keypoints: YOLO pose keypoints (17 points)
-            
-        Returns:
-            Dictionary with threat assessment
-        """
-        if len(keypoints) < 17:
-            return {"is_threat": False, "reason": "insufficient_data"}
-        
-        try:
-            # Extract key points
-            nose = keypoints[0]
-            left_wrist = keypoints[9]
-            right_wrist = keypoints[10]
-            left_elbow = keypoints[7]
-            right_elbow = keypoints[8]
-            left_shoulder = keypoints[5]
-            right_shoulder = keypoints[6]
-            
-            # Check for pointing/aiming gesture
-            # (arm extended, wrist higher than elbow)
-            
-            # Right arm pointing
-            right_arm_extended = (
-                right_wrist[0] > right_elbow[0] and  # Wrist forward
-                abs(right_wrist[1] - right_shoulder[1]) < 100  # Arm horizontal
-            )
-            
-            # Left arm pointing
-            left_arm_extended = (
-                left_wrist[0] < left_elbow[0] and
-                abs(left_wrist[1] - left_shoulder[1]) < 100
-            )
-            
-            if right_arm_extended or left_arm_extended:
-                return {
-                    "is_threat": True,
-                    "reason": "pointing_gesture",
-                    "confidence": 0.7
-                }
-            
-            # Check for hands raised (surrender/threat)
-            both_hands_up = (
-                left_wrist[1] < left_shoulder[1] and
-                right_wrist[1] < right_shoulder[1]
-            )
-            
-            if both_hands_up:
-                return {
-                    "is_threat": True,
-                    "reason": "hands_raised",
-                    "confidence": 0.5
-                }
-            
-            return {"is_threat": False, "reason": "normal_pose"}
-            
-        except Exception as e:
-            return {"is_threat": False, "reason": "detection_error"}
-    
-    def classify_abnormality(self, detection: Detection, pose_threat: Dict = None) -> Dict:
-        """
-        Classify if detection is abnormal
-        
-        Args:
-            detection: Object detection
-            pose_threat: Pose threat assessment
-            
-        Returns:
-            Abnormality classification
-        """
-        # Check for threat objects
+    def classify_abnormality(self, detection: Detection) -> Dict:
+        """Classify if detection is abnormal - ONLY for actual weapons"""
         threat_objects = ['knife', 'scissors', 'gun', 'weapon', 'handgun', 'pistol', 'rifle']
         
         is_abnormal = False
         abnormality_type = "normal"
         confidence = detection.confidence
         
-        # Check object type
         if any(threat in detection.class_name.lower() for threat in threat_objects):
             is_abnormal = True
             abnormality_type = "weapon_detected"
-        
-        # Check pose threat
-        if pose_threat and pose_threat.get("is_threat", False):
-            is_abnormal = True
-            abnormality_type = "threatening_pose"
-            confidence = max(confidence, pose_threat.get("confidence", 0.5))
         
         return {
             "is_abnormal": is_abnormal,
@@ -199,10 +98,46 @@ class AbnormalityDetector:
         }
 
 
+def apply_nms_to_detections(detections: List[Detection], iou_threshold: float = 0.4) -> List[Detection]:
+    """Apply Non-Maximum Suppression to remove duplicate detections"""
+    if len(detections) == 0:
+        return []
+    
+    boxes = np.array([d.bbox for d in detections])
+    scores = np.array([d.confidence for d in detections])
+    
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
+    
+    areas = (x2 - x1) * (y2 - y1)
+    order = scores.argsort()[::-1]
+    
+    keep = []
+    while order.size > 0:
+        i = order[0]
+        keep.append(i)
+        
+        xx1 = np.maximum(x1[i], x1[order[1:]])
+        yy1 = np.maximum(y1[i], y1[order[1:]])
+        xx2 = np.minimum(x2[i], x2[order[1:]])
+        yy2 = np.minimum(y2[i], y2[order[1:]])
+        
+        w = np.maximum(0.0, xx2 - xx1)
+        h = np.maximum(0.0, yy2 - yy1)
+        inter = w * h
+        
+        iou = inter / (areas[i] + areas[order[1:]] - inter)
+        
+        inds = np.where(iou <= iou_threshold)[0]
+        order = order[inds + 1]
+    
+    return [detections[i] for i in keep]
+
+
 class EnhancedDetectionEngine:
-    """
-    Enhanced detection engine with abnormality detection
-    """
+    """Enhanced detection engine with abnormality detection"""
     
     COCO_CLASSES = [
         'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat',
@@ -231,7 +166,6 @@ class EnhancedDetectionEngine:
         self.confidence_threshold = confidence_threshold or CONFIDENCE_THRESHOLD
         self.iou_threshold = iou_threshold or IOU_THRESHOLD
         
-        # Auto-detect device
         if device is None:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         else:
@@ -244,11 +178,9 @@ class EnhancedDetectionEngine:
         print(f"🚀 Initializing Enhanced Detection Engine...")
         print(f"📱 Device: {self.device.upper()}")
         
-        # Load main model
         self.model = self._load_model()
         self.model_loaded = True
         
-        # Load pose model for threat detection
         try:
             self.pose_model = YOLO('yolo11n-pose.pt')
             self.pose_enabled = True
@@ -258,7 +190,6 @@ class EnhancedDetectionEngine:
             self.pose_enabled = False
             print("⚠️ Pose detection not available")
         
-        # Initialize abnormality detector
         self.abnormality_detector = AbnormalityDetector() if enable_abnormality else None
         
         print(f"✅ Enhanced Detection Engine Ready")
@@ -285,26 +216,16 @@ class EnhancedDetectionEngine:
         confidence: float = None,
         detect_poses: bool = True
     ) -> Tuple[List[Dict], List[Dict]]:
-        """
-        Detect objects with abnormality classification
-        
-        Args:
-            image: Input image
-            confidence: Override confidence threshold
-            detect_poses: Whether to detect poses
-            
-        Returns:
-            Tuple of (normal_detections, abnormal_detections)
-        """
+        """Detect objects with abnormality classification - weapons only marked as abnormal"""
         conf = confidence or self.confidence_threshold
         
-        # 1. Detect all objects
         results = self.model(
             image,
             conf=conf,
             iou=self.iou_threshold,
             verbose=False,
-            device=self.device
+            device=self.device,
+            max_det=100
         )[0]
         
         all_detections = []
@@ -322,38 +243,19 @@ class EnhancedDetectionEngine:
             )
             all_detections.append(detection)
         
-        # 2. Detect poses (for people)
-        pose_threats = {}
-        if detect_poses and self.pose_enabled and self.abnormality_detector:
-            pose_results = self.pose_model(image, verbose=False)[0]
-            
-            if hasattr(pose_results, 'keypoints') and pose_results.keypoints is not None:
-                for i, keypoints in enumerate(pose_results.keypoints):
-                    if keypoints.xy is not None:
-                        kpts = keypoints.xy[0].cpu().numpy()
-                        threat_assessment = self.abnormality_detector.detect_threatening_poses(kpts)
-                        pose_threats[i] = threat_assessment
+        all_detections = apply_nms_to_detections(all_detections, iou_threshold=0.45)
         
-        # 3. Detect weapons (if available)
         weapon_detections = []
         if self.abnormality_detector:
             weapon_detections = self.abnormality_detector.detect_weapons(image)
+            weapon_detections = apply_nms_to_detections(weapon_detections, iou_threshold=0.45)
         
-        # 4. Classify abnormality for each detection
         normal_detections = []
         abnormal_detections = []
         
-        person_idx = 0
         for detection in all_detections:
-            # Get pose threat if person
-            pose_threat = None
-            if detection.class_name == "person" and person_idx in pose_threats:
-                pose_threat = pose_threats[person_idx]
-                person_idx += 1
-            
-            # Classify abnormality
             if self.abnormality_detector:
-                abnormality = self.abnormality_detector.classify_abnormality(detection, pose_threat)
+                abnormality = self.abnormality_detector.classify_abnormality(detection)
             else:
                 abnormality = {"is_abnormal": False, "type": "normal", "confidence": detection.confidence}
             
@@ -370,7 +272,6 @@ class EnhancedDetectionEngine:
             else:
                 normal_detections.append(detection_dict)
         
-        # Add weapon detections as abnormal
         for weapon in weapon_detections:
             abnormal_detections.append({
                 "detection": weapon,
@@ -387,6 +288,37 @@ class EnhancedDetectionEngine:
         
         return normal_detections, abnormal_detections
     
+    def detect_all_objects(self, image: np.ndarray, classes: Optional[List[int]] = None) -> List[Detection]:
+        """Detect all objects without abnormality classification"""
+        results = self.model(
+            image,
+            conf=self.confidence_threshold,
+            iou=self.iou_threshold,
+            verbose=False,
+            device=self.device,
+            classes=classes,
+            max_det=100
+        )[0]
+        
+        detections = []
+        for box in results.boxes:
+            bbox = box.xyxy[0].cpu().numpy().tolist()
+            confidence = float(box.conf[0])
+            class_id = int(box.cls[0])
+            class_name = self.COCO_CLASSES[class_id] if class_id < len(self.COCO_CLASSES) else "unknown"
+            
+            detection = Detection(
+                bbox=bbox,
+                confidence=confidence,
+                class_id=class_id,
+                class_name=class_name
+            )
+            detections.append(detection)
+        
+        detections = apply_nms_to_detections(detections, iou_threshold=0.45)
+        
+        return detections
+    
     def visualize_with_abnormality(
         self,
         image: np.ndarray,
@@ -395,71 +327,52 @@ class EnhancedDetectionEngine:
         show_confidence: bool = True,
         thickness: int = 2
     ) -> np.ndarray:
-        """
-        Visualize detections with green (normal) and red (abnormal) boxes
-        
-        Args:
-            image: Input image
-            normal_detections: List of normal detections
-            abnormal_detections: List of abnormal detections
-            show_confidence: Show confidence scores
-            thickness: Line thickness
-            
-        Returns:
-            Annotated image
-        """
+        """Visualize detections with green (normal) and red (abnormal/weapon) boxes"""
         annotated = image.copy()
         
-        # Draw normal detections (GREEN)
         for det_dict in normal_detections:
             x1, y1, x2, y2 = map(int, det_dict["bbox"])
-            color = (0, 255, 0)  # Green
+            color = (0, 255, 0)
             
             cv2.rectangle(annotated, (x1, y1), (x2, y2), color, thickness)
             
-            label = f"Normal: {det_dict['class_name']}"
+            label = det_dict['class_name']
             if show_confidence:
                 label += f" {det_dict['confidence']:.2f}"
             
-            # Background for text
             (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
             cv2.rectangle(annotated, (x1, y1 - h - 4), (x1 + w, y1), color, -1)
             cv2.putText(annotated, label, (x1, y1 - 5),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
-        # Draw abnormal detections (RED)
         for det_dict in abnormal_detections:
             x1, y1, x2, y2 = map(int, det_dict["bbox"])
-            color = (0, 0, 255)  # Red
+            color = (0, 0, 255)
             
-            # Thicker box for abnormal
             cv2.rectangle(annotated, (x1, y1), (x2, y2), color, thickness + 1)
             
             abnormality_type = det_dict["abnormality"]["type"]
-            label = f"ABNORMAL: {abnormality_type}"
+            label = f"⚠ {abnormality_type}"
             if show_confidence:
                 label += f" {det_dict['confidence']:.2f}"
             
-            # Red background for text
             (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
             cv2.rectangle(annotated, (x1, y1 - h - 6), (x1 + w, y1), color, -1)
             cv2.putText(annotated, label, (x1, y1 - 5),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
             
-            # Add warning icon
             cv2.putText(annotated, "⚠", (x2 - 30, y1 + 30),
                        cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
         
-        # Add summary at top
         total_normal = len(normal_detections)
         total_abnormal = len(abnormal_detections)
         
-        summary = f"Normal: {total_normal} | ABNORMAL: {total_abnormal}"
+        summary = f"Normal: {total_normal} | THREATS: {total_abnormal}"
         cv2.putText(annotated, summary, (10, 30),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         
         if total_abnormal > 0:
-            cv2.putText(annotated, "⚠ THREAT DETECTED ⚠", (10, 70),
+            cv2.putText(annotated, "⚠ WEAPON DETECTED ⚠", (10, 70),
                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
         
         return annotated
@@ -476,13 +389,11 @@ class EnhancedDetectionEngine:
         }
 
 
-
 if __name__ == "__main__":
     print("✅ Enhanced Detection Engine with Abnormality Detection Ready")
     print("🎯 Features:")
-    print("  - Normal/Abnormal classification")
-    print("  - Weapon detection")
-    print("  - Threatening pose detection")
-    print("  - Color-coded visualization (Green=Normal, Red=Abnormal)")
+    print("  - Weapon-only threat detection")
+    print("  - NMS ghost box removal")
+    print("  - Color-coded visualization (Green=Normal, Red=Weapon)")
     
 DetectionEngine = EnhancedDetectionEngine
