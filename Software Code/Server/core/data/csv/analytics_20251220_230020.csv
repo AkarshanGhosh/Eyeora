@@ -1,0 +1,14 @@
+timestamp,person_id,entry_time,exit_time,duration_seconds,behavior,visited_zones,made_purchase,confidence,movement_distance,details
+2025-12-20 23:00:20,18bd40cf,05:30:00,05:30:00,8.0,browsing,main_area,No,0.85,484.16,"Active browsing for 8.0s, moved 484px"
+2025-12-20 23:00:20,16e64512,05:30:00,05:30:00,39.67,browsing,main_area,No,0.85,615.55,"Active browsing for 39.7s, moved 616px"
+2025-12-20 23:00:20,3ccb489e,05:30:01,05:30:00,3.33,browsing,entry,No,0.75,6.54,Browsing with limited movement for 3.3s
+2025-12-20 23:00:20,877f0cf7,05:30:01,05:30:00,3.0,browsing,entry,No,0.85,32.54,"Active browsing for 3.0s, moved 33px"
+2025-12-20 23:00:20,fc2bf79d,05:30:07,05:30:00,8.33,idle,main_area,No,0.85,76.05,Person stationary for 8.3s
+2025-12-20 23:00:20,aa0aa910,05:30:11,05:30:00,4.33,browsing,entry,No,0.75,6.21,Browsing with limited movement for 4.3s
+2025-12-20 23:00:20,63f0dd42,05:30:11,05:30:00,5.33,idle,main_area,No,0.85,38.56,Person stationary for 5.3s
+2025-12-20 23:00:20,7054db93,05:30:22,05:30:00,41.33,browsing,"exit, main_area",No,0.85,570.81,"Active browsing for 41.3s, moved 571px"
+2025-12-20 23:00:20,877a28d2,05:30:55,05:30:00,86.33,browsing,"exit, main_area",No,0.85,3183.04,"Active browsing for 86.3s, moved 3183px"
+2025-12-20 23:00:20,114b940a,05:30:55,05:30:00,3.67,browsing,exit,No,0.75,2.38,Browsing with limited movement for 3.7s
+2025-12-20 23:00:20,879e55e9,05:31:09,05:30:00,87.67,browsing,exit,No,0.75,101.76,Browsing with limited movement for 87.7s
+2025-12-20 23:00:20,ae83002b,05:31:31,05:30:00,4.0,browsing,entry,No,0.75,7.95,Browsing with limited movement for 4.0s
+2025-12-20 23:00:20,7ef09a71,05:31:31,05:30:00,4.0,browsing,"entry, main_area",No,0.85,76.52,"Active browsing for 4.0s, moved 77px"

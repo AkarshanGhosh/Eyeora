@@ -1,0 +1,55 @@
+timestamp,person_id,entry_time,exit_time,duration_seconds,behavior,visited_zones,made_purchase,confidence,movement_distance,details
+2025-12-20 23:08:57,6fc7e39e,05:30:00,05:30:00,14.33,browsing,main_area,No,0.85,574.94,"Active browsing for 14.3s, moved 575px"
+2025-12-20 23:08:57,ba8d052b,05:30:00,05:30:00,23.67,browsing,"main_area, exit",No,0.85,513.21,"Active browsing for 23.7s, moved 513px"
+2025-12-20 23:08:57,b91cb99a,05:30:00,05:30:00,16.0,browsing,"main_area, exit",No,0.85,693.82,"Active browsing for 16.0s, moved 694px"
+2025-12-20 23:08:57,aebe5cdf,05:30:00,05:30:00,3.33,browsing,exit,No,0.85,88.09,"Active browsing for 3.3s, moved 88px"
+2025-12-20 23:08:57,587834cd,05:30:00,05:30:00,12.0,browsing,exit,No,0.85,238.56,"Active browsing for 12.0s, moved 239px"
+2025-12-20 23:08:57,9eaf2737,05:30:00,05:30:00,21.67,browsing,"entry, main_area",No,0.85,283.01,"Active browsing for 21.7s, moved 283px"
+2025-12-20 23:08:57,46280dc4,05:30:00,05:30:00,22.67,browsing,"main_area, exit",No,0.85,584.67,"Active browsing for 22.7s, moved 585px"
+2025-12-20 23:08:57,f9be03ba,05:30:00,05:30:00,14.33,browsing,entry,No,0.75,110.38,Browsing with limited movement for 14.3s
+2025-12-20 23:08:57,c7f2274f,05:30:00,05:30:00,7.67,browsing,main_area,No,0.85,98.2,"Active browsing for 7.7s, moved 98px"
+2025-12-20 23:08:57,490ebfb5,05:30:00,05:30:00,16.67,browsing,entry,No,0.85,594.0,"Active browsing for 16.7s, moved 594px"
+2025-12-20 23:08:57,bd77b24e,05:30:01,05:30:00,19.33,browsing,entry,No,0.75,147.78,Browsing with limited movement for 19.3s
+2025-12-20 23:08:57,e6fd91a1,05:30:01,05:30:00,0.67,passing_through,,No,0.5,46.17,Insufficient tracking data
+2025-12-20 23:08:57,e48c5fd8,05:30:02,05:30:00,9.0,browsing,exit,No,0.85,131.61,"Active browsing for 9.0s, moved 132px"
+2025-12-20 23:08:57,f2138f4e,05:30:02,05:30:00,6.67,idle,"entry, main_area",No,0.85,134.05,Person stationary for 6.7s
+2025-12-20 23:08:57,aaa8a94b,05:30:02,05:30:00,31.67,idle,entry,No,0.85,94.11,Person stationary for 31.7s
+2025-12-20 23:08:57,c13917fd,05:30:02,05:30:00,9.33,idle,main_area,No,0.85,218.19,Person stationary for 9.3s
+2025-12-20 23:08:57,afc67fbc,05:30:02,05:30:00,9.67,browsing,exit,No,0.85,318.24,"Active browsing for 9.7s, moved 318px"
+2025-12-20 23:08:57,fad47661,05:30:02,05:30:00,20.33,browsing,"main_area, exit",No,0.85,313.07,"Active browsing for 20.3s, moved 313px"
+2025-12-20 23:08:57,607e5b38,05:30:02,05:30:00,0.67,passing_through,,No,0.5,17.81,Insufficient tracking data
+2025-12-20 23:08:57,547bfe48,05:30:03,05:30:00,0.67,passing_through,,No,0.5,7.08,Insufficient tracking data
+2025-12-20 23:08:57,f3fe1801,05:30:04,05:30:00,19.67,browsing,"main_area, exit",No,0.85,276.61,"Active browsing for 19.7s, moved 277px"
+2025-12-20 23:08:57,d454291e,05:30:05,05:30:00,6.67,passing_through,,No,0.5,74.73,Insufficient tracking data
+2025-12-20 23:08:57,f090d6dc,05:30:05,05:30:00,18.33,browsing,"main_area, exit",No,0.75,108.13,Browsing with limited movement for 18.3s
+2025-12-20 23:08:57,e9586bd0,05:30:05,05:30:00,27.33,browsing,main_area,No,0.75,39.92,Browsing with limited movement for 27.3s
+2025-12-20 23:08:57,c61f2c88,05:30:05,05:30:00,3.0,passing_through,,No,0.5,37.93,Insufficient tracking data
+2025-12-20 23:08:57,396b6ca0,05:30:05,05:30:00,2.67,passing_through,exit,No,0.8,74.88,Quick transit through store
+2025-12-20 23:08:57,97a408d0,05:30:05,05:30:00,1.67,passing_through,entry,No,0.8,63.63,Quick transit through store
+2025-12-20 23:08:57,16b07dc2,05:30:07,05:30:00,7.0,browsing,entry,No,0.85,84.59,"Active browsing for 7.0s, moved 85px"
+2025-12-20 23:08:57,2e5a1a68,05:30:11,05:30:00,2.33,passing_through,entry,No,0.8,41.16,Quick transit through store
+2025-12-20 23:08:57,e0cc9e76,05:30:11,05:30:00,2.33,passing_through,entry,No,0.8,27.36,Quick transit through store
+2025-12-20 23:08:57,4096e86b,05:30:11,05:30:00,9.67,browsing,entry,No,0.75,37.28,Browsing with limited movement for 9.7s
+2025-12-20 23:08:57,7ab8de3a,05:30:12,05:30:00,10.0,idle,entry,No,0.85,38.57,Person stationary for 10.0s
+2025-12-20 23:08:57,6423bd3e,05:30:12,05:30:00,24.0,idle,entry,No,0.85,54.37,Person stationary for 24.0s
+2025-12-20 23:08:57,a7358d7f,05:30:12,05:30:00,18.67,browsing,entry,No,0.85,219.02,"Active browsing for 18.7s, moved 219px"
+2025-12-20 23:08:57,103bf241,05:30:12,05:30:00,22.67,idle,entry,No,0.85,107.81,Person stationary for 22.7s
+2025-12-20 23:08:57,a9da7315,05:30:12,05:30:00,3.33,browsing,entry,No,0.75,23.61,Browsing with limited movement for 3.3s
+2025-12-20 23:08:57,afc0af7a,05:30:14,05:30:00,20.33,browsing,entry,No,0.75,47.1,Browsing with limited movement for 20.3s
+2025-12-20 23:08:57,a7998543,05:30:15,05:30:00,31.0,purchasing,"checkout, main_area, exit",Yes,0.9,587.13,Customer visited checkout area
+2025-12-20 23:08:57,138020de,05:30:15,05:30:00,16.33,idle,"entry, main_area",No,0.85,58.46,Person stationary for 16.3s
+2025-12-20 23:08:57,24b89aca,05:30:18,05:30:00,17.33,idle,entry,No,0.85,78.37,Person stationary for 17.3s
+2025-12-20 23:08:57,1291fc01,05:30:19,05:30:00,3.0,browsing,entry,No,0.75,12.3,Browsing with limited movement for 3.0s
+2025-12-20 23:08:57,bc683f03,05:30:24,05:30:00,20.0,browsing,entry,No,0.85,235.96,"Active browsing for 20.0s, moved 236px"
+2025-12-20 23:08:57,50cb2e94,05:30:28,05:30:00,8.0,browsing,entry,No,0.75,26.51,Browsing with limited movement for 8.0s
+2025-12-20 23:08:57,8115e4bc,05:30:30,05:30:00,4.67,browsing,entry,No,0.75,16.98,Browsing with limited movement for 4.7s
+2025-12-20 23:08:57,0af3ad4e,05:30:31,05:30:00,7.0,passing_through,,No,0.5,66.37,Insufficient tracking data
+2025-12-20 23:08:57,83df890c,05:30:31,05:30:00,3.33,browsing,main_area,No,0.85,98.99,"Active browsing for 3.3s, moved 99px"
+2025-12-20 23:08:57,86d4236c,05:30:32,05:30:00,2.33,passing_through,,No,0.5,81.59,Insufficient tracking data
+2025-12-20 23:08:57,ef474eff,05:30:33,05:30:00,2.33,passing_through,entry,No,0.8,26.33,Quick transit through store
+2025-12-20 23:08:57,ffb0c286,05:30:35,05:30:00,5.33,browsing,exit,No,0.85,440.39,"Active browsing for 5.3s, moved 440px"
+2025-12-20 23:08:57,7df389ab,05:30:38,05:30:00,0.67,passing_through,,No,0.5,113.63,Insufficient tracking data
+2025-12-20 23:08:57,b88a50cd,05:30:39,05:30:00,5.33,passing_through,,No,0.5,106.82,Insufficient tracking data
+2025-12-20 23:08:57,00be268b,05:30:39,05:30:00,5.33,passing_through,,No,0.5,150.4,Insufficient tracking data
+2025-12-20 23:08:57,ffc38fe9,05:30:42,05:30:00,1.0,passing_through,,No,0.5,18.49,Insufficient tracking data
+2025-12-20 23:08:57,adb6c9f3,05:30:45,05:30:00,7.0,idle,entry,No,0.85,46.49,Person stationary for 7.0s

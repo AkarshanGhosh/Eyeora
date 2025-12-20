@@ -1,0 +1,28 @@
+======================================================================
+COMPLETE VIDEO ANALYSIS REPORT
+======================================================================
+
+Generated: 2025-12-20 23:23:42
+Video: Pedestrians_Crossing_in_Heavy_Rain_-_Akihabara_Tokyo_Japan_UGR_RAW_FOOTAGE_480P.mp4
+Duration: 69.13s
+Resolution: 480x854
+
+BEHAVIOR ANALYSIS
+----------------------------------------------------------------------
+Total Visitors: 54
+Purchasers: 1
+Window Shoppers: 0
+Browsers: 28
+Passing Through: 16
+Conversion Rate: 1.85%
+Avg Visit Duration: 11.11s
+
+WEAPON DETECTION
+----------------------------------------------------------------------
+Threat Level: LOW
+Total Frames Analyzed: 207
+Abnormal Frames: 0 (0.0%)
+Total Weapons Detected: 0
+
+ABNORMAL FRAMES TIMELINE (first 50)
+----------------------------------------------------------------------

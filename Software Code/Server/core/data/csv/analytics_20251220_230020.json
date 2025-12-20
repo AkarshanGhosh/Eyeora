@@ -1,0 +1,426 @@
+{
+  "export_timestamp": "2025-12-20T23:00:20.506849",
+  "total_tracks": 13,
+  "summary": {
+    "total_visitors": 13,
+    "total_customers": 0,
+    "window_shoppers": 0,
+    "browsers": 11,
+    "purchasers": 0,
+    "passing_through": 0,
+    "idle": 2,
+    "conversion_rate": 0.0,
+    "avg_visit_duration": 23.0,
+    "total_checkout_visitors": 0,
+    "behavior_distribution": {
+      "browsing": 11,
+      "idle": 2
+    },
+    "total_frames_analyzed": 514,
+    "abnormal_frames": 0,
+    "abnormal_percentage": 0.0,
+    "threat_level": "LOW",
+    "abnormality_types": {},
+    "total_threats_detected": 0
+  },
+  "tracks": [
+    {
+      "track_id": 1,
+      "uuid": "18bd40cf",
+      "behavior": "browsing",
+      "confidence": 0.85,
+      "duration": 8.0,
+      "zones_visited": [
+        "main_area"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 484.1613183063681,
+      "is_stationary": "False",
+      "entry_time": 0.3333333333333333,
+      "exit_time": 0,
+      "details": "Active browsing for 8.0s, moved 484px",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "standing",
+      "activity_history": [
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing"
+      ]
+    },
+    {
+      "track_id": 2,
+      "uuid": "16e64512",
+      "behavior": "browsing",
+      "confidence": 0.85,
+      "duration": 39.666666666666664,
+      "zones_visited": [
+        "main_area"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 615.553379206568,
+      "is_stationary": "False",
+      "entry_time": 0.3333333333333333,
+      "exit_time": 0,
+      "details": "Active browsing for 39.7s, moved 616px",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "standing",
+      "activity_history": [
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing"
+      ]
+    },
+    {
+      "track_id": 3,
+      "uuid": "3ccb489e",
+      "behavior": "browsing",
+      "confidence": 0.75,
+      "duration": 3.333333333333333,
+      "zones_visited": [
+        "entry"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 6.542626987533991,
+      "is_stationary": "True",
+      "entry_time": 1.0,
+      "exit_time": 0,
+      "details": "Browsing with limited movement for 3.3s",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "standing",
+      "activity_history": [
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing"
+      ]
+    },
+    {
+      "track_id": 4,
+      "uuid": "877f0cf7",
+      "behavior": "browsing",
+      "confidence": 0.85,
+      "duration": 3.0,
+      "zones_visited": [
+        "entry"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 32.543081334789335,
+      "is_stationary": false,
+      "entry_time": 1.0,
+      "exit_time": 0,
+      "details": "Active browsing for 3.0s, moved 33px",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "standing",
+      "activity_history": [
+        "standing",
+        "standing"
+      ]
+    },
+    {
+      "track_id": 6,
+      "uuid": "fc2bf79d",
+      "behavior": "idle",
+      "confidence": 0.85,
+      "duration": 8.333333333333334,
+      "zones_visited": [
+        "main_area"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 76.05455126726778,
+      "is_stationary": "True",
+      "entry_time": 7.0,
+      "exit_time": 0,
+      "details": "Person stationary for 8.3s",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "sitting",
+      "activity_history": [
+        "sitting",
+        "sitting"
+      ]
+    },
+    {
+      "track_id": 7,
+      "uuid": "aa0aa910",
+      "behavior": "browsing",
+      "confidence": 0.75,
+      "duration": 4.333333333333332,
+      "zones_visited": [
+        "entry"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 6.208502754500247,
+      "is_stationary": "True",
+      "entry_time": 11.333333333333334,
+      "exit_time": 0,
+      "details": "Browsing with limited movement for 4.3s",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "unknown",
+      "activity_history": []
+    },
+    {
+      "track_id": 8,
+      "uuid": "63f0dd42",
+      "behavior": "idle",
+      "confidence": 0.85,
+      "duration": 5.333333333333334,
+      "zones_visited": [
+        "main_area"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 38.55843763524266,
+      "is_stationary": "True",
+      "entry_time": 11.333333333333334,
+      "exit_time": 0,
+      "details": "Person stationary for 5.3s",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "unknown",
+      "activity_history": []
+    },
+    {
+      "track_id": 9,
+      "uuid": "7054db93",
+      "behavior": "browsing",
+      "confidence": 0.85,
+      "duration": 41.333333333333336,
+      "zones_visited": [
+        "exit",
+        "main_area"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 570.8122454058113,
+      "is_stationary": "False",
+      "entry_time": 22.0,
+      "exit_time": 0,
+      "details": "Active browsing for 41.3s, moved 571px",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "sitting",
+      "activity_history": [
+        "sitting",
+        "sitting",
+        "sitting",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "sitting",
+        "sitting",
+        "sitting",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "sitting",
+        "sitting"
+      ]
+    },
+    {
+      "track_id": 11,
+      "uuid": "877a28d2",
+      "behavior": "browsing",
+      "confidence": 0.85,
+      "duration": 86.33333333333334,
+      "zones_visited": [
+        "exit",
+        "main_area"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 3183.0415822365235,
+      "is_stationary": "False",
+      "entry_time": 55.0,
+      "exit_time": 0,
+      "details": "Active browsing for 86.3s, moved 3183px",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "standing",
+      "activity_history": [
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing"
+      ]
+    },
+    {
+      "track_id": 12,
+      "uuid": "114b940a",
+      "behavior": "browsing",
+      "confidence": 0.75,
+      "duration": 3.6666666666666643,
+      "zones_visited": [
+        "exit"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 2.3765386224596043,
+      "is_stationary": false,
+      "entry_time": 55.333333333333336,
+      "exit_time": 0,
+      "details": "Browsing with limited movement for 3.7s",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "unknown",
+      "activity_history": []
+    },
+    {
+      "track_id": 13,
+      "uuid": "879e55e9",
+      "behavior": "browsing",
+      "confidence": 0.75,
+      "duration": 87.66666666666667,
+      "zones_visited": [
+        "exit"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 101.75932841288204,
+      "is_stationary": false,
+      "entry_time": 69.33333333333333,
+      "exit_time": 0,
+      "details": "Browsing with limited movement for 87.7s",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "standing",
+      "activity_history": [
+        "standing",
+        "standing",
+        "standing",
+        "standing",
+        "standing"
+      ]
+    },
+    {
+      "track_id": 14,
+      "uuid": "ae83002b",
+      "behavior": "browsing",
+      "confidence": 0.75,
+      "duration": 4.0,
+      "zones_visited": [
+        "entry"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 7.952579658614122,
+      "is_stationary": "True",
+      "entry_time": 91.66666666666667,
+      "exit_time": 0,
+      "details": "Browsing with limited movement for 4.0s",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "unknown",
+      "activity_history": []
+    },
+    {
+      "track_id": 15,
+      "uuid": "7ef09a71",
+      "behavior": "browsing",
+      "confidence": 0.85,
+      "duration": 4.0,
+      "zones_visited": [
+        "entry",
+        "main_area"
+      ],
+      "visited_checkout": false,
+      "made_purchase": false,
+      "movement_distance": 76.51621102302231,
+      "is_stationary": "True",
+      "entry_time": 91.66666666666667,
+      "exit_time": 0,
+      "details": "Active browsing for 4.0s, moved 77px",
+      "clothing": {
+        "color": "unknown",
+        "pattern": "solid"
+      },
+      "dominant_activity": "unknown",
+      "activity_history": []
+    }
+  ]
+}

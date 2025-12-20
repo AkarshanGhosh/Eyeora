@@ -144,33 +144,20 @@ class PersonTracker:
         self.frame_count = 0
     
     def update(self, detections: List[Detection], timestamp: float) -> List[Track]:
-        """
-        Update tracks with new detections
-        
-        Args:
-            detections: List of person detections from current frame
-            timestamp: Current timestamp in seconds
-            
-        Returns:
-            List of active tracks
-        """
         self.frame_count += 1
-        
-        # Filter only person detections
         person_detections = [d for d in detections if d.class_name == "person"]
-        
+    
         if len(self.tracks) == 0:
-            # Initialize tracks for first frame
             for detection in person_detections:
                 self._create_track(detection, timestamp)
         else:
-            # Match detections to existing tracks
             self._match_detections_to_tracks(person_detections, timestamp)
-        
-        # Remove old tracks
+    
         self._remove_old_tracks()
-        
-        return [t for t in self.tracks if t.is_active]
+    
+    # CHANGE THIS: Only return tracks that were seen in THIS SPECIFIC FRAME
+    # This immediately kills the "ghost" boxes in the output
+        return [t for t in self.tracks if t.is_active and t.frames[-1] == self.frame_count]
     
     def _create_track(self, detection: Detection, timestamp: float):
         """Create new track"""

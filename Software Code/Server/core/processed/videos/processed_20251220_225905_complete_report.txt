@@ -1,0 +1,28 @@
+======================================================================
+COMPLETE VIDEO ANALYSIS REPORT
+======================================================================
+
+Generated: 2025-12-20 23:00:19
+Video: Pistol_Fundamentals_480P.mp4
+Duration: 171.53s
+Resolution: 640x480
+
+BEHAVIOR ANALYSIS
+----------------------------------------------------------------------
+Total Visitors: 13
+Purchasers: 0
+Window Shoppers: 0
+Browsers: 11
+Passing Through: 0
+Conversion Rate: 0.0%
+Avg Visit Duration: 23.00s
+
+WEAPON DETECTION
+----------------------------------------------------------------------
+Threat Level: LOW
+Total Frames Analyzed: 514
+Abnormal Frames: 0 (0.0%)
+Total Weapons Detected: 0
+
+ABNORMAL FRAMES TIMELINE (first 50)
+----------------------------------------------------------------------

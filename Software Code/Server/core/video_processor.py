@@ -560,9 +560,15 @@ class CompleteVideoProcessor:
         if self.show_zones and self.analyzer:
             frame = draw_zones(frame, self.analyzer.zone_detector)
 
-        for i, track in enumerate(tracks):
+        for track in tracks:
             if not track.detections:
                 continue
+
+            # FIX: Only draw if the track was updated in the CURRENT frame
+            # This prevents 'ghost' boxes from persisting after a person leaves
+            if hasattr(track, 'frames') and len(track.frames) > 0:
+                if track.frames[-1] != frame_num:
+                    continue
 
             bbox = track.detections[-1].bbox
             x1, y1, x2, y2 = map(int, bbox)
