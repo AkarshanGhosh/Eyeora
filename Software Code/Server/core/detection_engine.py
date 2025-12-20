@@ -1,6 +1,5 @@
 """
-Enhanced Detection Engine with Abnormality Detection
-Detects weapons, suspicious objects, and abnormal behaviors
+Enhanced Detection Engine with Clean Visualization
 Location: Software Code/Server/core/detection_engine.py
 """
 
@@ -26,31 +25,22 @@ class AbnormalityDetector:
         'scissors': 76,
     }
     
-    SUSPICIOUS_BEHAVIORS = [
-        'pointing',
-        'aiming',
-        'threatening_gesture'
-    ]
-    
     def __init__(self):
-        """Initialize abnormality detector"""
         self.threat_history = {}
         self.alert_threshold = 0.6
         self.weapon_model = self._load_weapon_model()
     
     def _load_weapon_model(self) -> Optional[YOLO]:
-        """Load specialized weapon detection model if available"""
         weapon_model_path = MODELS_DIR / "weapon_detection.pt"
         
         if weapon_model_path.exists():
             print("🔫 Loading weapon detection model...")
             return YOLO(str(weapon_model_path))
         else:
-            print("⚠️ No specialized weapon model found. Using COCO model only.")
+            print("⚠️ No specialized weapon model found.")
             return None
     
     def detect_weapons(self, image: np.ndarray) -> List[Detection]:
-        """Detect weapons in image using specialized model"""
         if self.weapon_model is None:
             return []
         
@@ -75,31 +65,23 @@ class AbnormalityDetector:
             return detections
             
         except Exception as e:
-            print(f"❌ Weapon detection error: {e}")
             return []
     
     def classify_abnormality(self, detection: Detection) -> Dict:
-        """Classify if detection is abnormal - ONLY for actual weapons"""
         threat_objects = ['knife', 'scissors', 'gun', 'weapon', 'handgun', 'pistol', 'rifle']
         
-        is_abnormal = False
-        abnormality_type = "normal"
-        confidence = detection.confidence
-        
-        if any(threat in detection.class_name.lower() for threat in threat_objects):
-            is_abnormal = True
-            abnormality_type = "weapon_detected"
+        is_abnormal = any(threat in detection.class_name.lower() for threat in threat_objects)
         
         return {
             "is_abnormal": is_abnormal,
-            "type": abnormality_type,
-            "confidence": confidence,
-            "requires_alert": is_abnormal and confidence > self.alert_threshold
+            "type": "weapon_detected" if is_abnormal else "normal",
+            "confidence": detection.confidence,
+            "requires_alert": is_abnormal and detection.confidence > self.alert_threshold
         }
 
 
-def apply_nms_to_detections(detections: List[Detection], iou_threshold: float = 0.4) -> List[Detection]:
-    """Apply Non-Maximum Suppression to remove duplicate detections"""
+def apply_nms_to_detections(detections: List[Detection], iou_threshold: float = 0.5) -> List[Detection]:
+    """Apply Non-Maximum Suppression"""
     if len(detections) == 0:
         return []
     
@@ -137,7 +119,7 @@ def apply_nms_to_detections(detections: List[Detection], iou_threshold: float = 
 
 
 class EnhancedDetectionEngine:
-    """Enhanced detection engine with abnormality detection"""
+    """Enhanced detection engine with clean visualization"""
     
     COCO_CLASSES = [
         'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat',
@@ -161,7 +143,6 @@ class EnhancedDetectionEngine:
         device: str = None,
         enable_abnormality: bool = True
     ):
-        """Initialize enhanced detection engine"""
         self.model_name = model_name or YOLO_MODEL
         self.confidence_threshold = confidence_threshold or CONFIDENCE_THRESHOLD
         self.iou_threshold = iou_threshold or IOU_THRESHOLD
@@ -195,7 +176,6 @@ class EnhancedDetectionEngine:
         print(f"✅ Enhanced Detection Engine Ready")
     
     def _load_model(self) -> YOLO:
-        """Load YOLO model"""
         model_path = MODELS_DIR / self.model_name
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         
@@ -216,7 +196,6 @@ class EnhancedDetectionEngine:
         confidence: float = None,
         detect_poses: bool = True
     ) -> Tuple[List[Dict], List[Dict]]:
-        """Detect objects with abnormality classification - weapons only marked as abnormal"""
         conf = confidence or self.confidence_threshold
         
         results = self.model(
@@ -225,7 +204,7 @@ class EnhancedDetectionEngine:
             iou=self.iou_threshold,
             verbose=False,
             device=self.device,
-            max_det=100
+            max_det=50
         )[0]
         
         all_detections = []
@@ -243,12 +222,12 @@ class EnhancedDetectionEngine:
             )
             all_detections.append(detection)
         
-        all_detections = apply_nms_to_detections(all_detections, iou_threshold=0.45)
+        all_detections = apply_nms_to_detections(all_detections, iou_threshold=0.5)
         
         weapon_detections = []
         if self.abnormality_detector:
             weapon_detections = self.abnormality_detector.detect_weapons(image)
-            weapon_detections = apply_nms_to_detections(weapon_detections, iou_threshold=0.45)
+            weapon_detections = apply_nms_to_detections(weapon_detections, iou_threshold=0.5)
         
         normal_detections = []
         abnormal_detections = []
@@ -289,7 +268,6 @@ class EnhancedDetectionEngine:
         return normal_detections, abnormal_detections
     
     def detect_all_objects(self, image: np.ndarray, classes: Optional[List[int]] = None) -> List[Detection]:
-        """Detect all objects without abnormality classification"""
         results = self.model(
             image,
             conf=self.confidence_threshold,
@@ -297,7 +275,7 @@ class EnhancedDetectionEngine:
             verbose=False,
             device=self.device,
             classes=classes,
-            max_det=100
+            max_det=50
         )[0]
         
         detections = []
@@ -315,7 +293,7 @@ class EnhancedDetectionEngine:
             )
             detections.append(detection)
         
-        detections = apply_nms_to_detections(detections, iou_threshold=0.45)
+        detections = apply_nms_to_detections(detections, iou_threshold=0.5)
         
         return detections
     
@@ -324,10 +302,10 @@ class EnhancedDetectionEngine:
         image: np.ndarray,
         normal_detections: List[Dict],
         abnormal_detections: List[Dict],
-        show_confidence: bool = True,
-        thickness: int = 2
+        show_confidence: bool = False,
+        thickness: int = 1
     ) -> np.ndarray:
-        """Visualize detections with green (normal) and red (abnormal/weapon) boxes"""
+        """Clean visualization like Image 1"""
         annotated = image.copy()
         
         for det_dict in normal_detections:
@@ -336,49 +314,34 @@ class EnhancedDetectionEngine:
             
             cv2.rectangle(annotated, (x1, y1), (x2, y2), color, thickness)
             
-            label = det_dict['class_name']
-            if show_confidence:
-                label += f" {det_dict['confidence']:.2f}"
+            label = f"ID: {det_dict['class_name']}"
             
-            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-            cv2.rectangle(annotated, (x1, y1 - h - 4), (x1 + w, y1), color, -1)
             cv2.putText(annotated, label, (x1, y1 - 5),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
         
         for det_dict in abnormal_detections:
             x1, y1, x2, y2 = map(int, det_dict["bbox"])
             color = (0, 0, 255)
             
-            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, thickness + 1)
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
             
-            abnormality_type = det_dict["abnormality"]["type"]
-            label = f"⚠ {abnormality_type}"
-            if show_confidence:
-                label += f" {det_dict['confidence']:.2f}"
+            label = f"⚠ WEAPON"
             
-            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
-            cv2.rectangle(annotated, (x1, y1 - h - 6), (x1 + w, y1), color, -1)
             cv2.putText(annotated, label, (x1, y1 - 5),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-            
-            cv2.putText(annotated, "⚠", (x2 - 30, y1 + 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         
         total_normal = len(normal_detections)
         total_abnormal = len(abnormal_detections)
         
-        summary = f"Normal: {total_normal} | THREATS: {total_abnormal}"
-        cv2.putText(annotated, summary, (10, 30),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        cv2.putText(annotated, f"Tracks: {total_normal}", (10, 30),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
-        if total_abnormal > 0:
-            cv2.putText(annotated, "⚠ WEAPON DETECTED ⚠", (10, 70),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+        cv2.putText(annotated, f"Weapons: {total_abnormal}", (10, 60),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
         return annotated
     
     def get_model_info(self) -> Dict:
-        """Get model information"""
         return {
             "model_name": self.model_name,
             "device": self.device,
@@ -390,10 +353,6 @@ class EnhancedDetectionEngine:
 
 
 if __name__ == "__main__":
-    print("✅ Enhanced Detection Engine with Abnormality Detection Ready")
-    print("🎯 Features:")
-    print("  - Weapon-only threat detection")
-    print("  - NMS ghost box removal")
-    print("  - Color-coded visualization (Green=Normal, Red=Weapon)")
+    print("✅ Enhanced Detection Engine Ready")
     
 DetectionEngine = EnhancedDetectionEngine
