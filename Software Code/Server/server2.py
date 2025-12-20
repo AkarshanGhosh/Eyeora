@@ -52,7 +52,7 @@ from core.config import (
     MODELS_DIR,
     DATA_DIR,
 )
-from core.detection_engine import DetectionEngine, ModelManager
+from core.detection_engine import DetectionEngine #ModelManager
 from core.video_processor import VideoProcessor
 from core.tracker import PersonTracker
 from core.behavior_analyzer import BehaviorAnalyzer
@@ -102,7 +102,7 @@ print("🚀 Initializing Eyeora Backend...")
 
 # Detection engine
 detection_engine = None
-model_manager = ModelManager()
+#model_manager = ModelManager()
 
 # Video processor
 video_processor = None
