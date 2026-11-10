@@ -19,3 +19,4 @@ Server/models/*.pt
 *.pt
 Server/*.pt
 Server/models/*.pt
+Server/myenv311
